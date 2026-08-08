@@ -1,0 +1,18 @@
+{
+  "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.2.6/",
+  "clangd.path": "C:\\Espressif\\tools\\esp-clang\\16.0.1-fe4f10a809\\esp-clang\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=d:\\OtherProjects\\ESP32\\MistMusic\\build"
+  ],
+  "idf.openOcdConfigs": [
+    "interface/ftdi/esp_ftdi.cfg",
+    "target/esp32s3.cfg"
+  ],
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32s3"
+  },
+  "idf.portWin": "COM8",
+  "idf.flashType": "UART"
+}
