@@ -185,15 +185,14 @@ static void UsbStorageTask(void *arg){
     {
         if (g_DeviceConnected && !g_DeviceInstalled)
         {
-            CdcReadDrive();
             g_DeviceInstalled = true;
             MediaLibrary_Clear();
             UsbStorage_OpenDevice();
             if(g_Device != NULL){
-                DriveInReading();
                 UsbStorage_ReadFS();
+                if(GetCdcState() != STANDBY)
+                    CdcLoadDisk();                 
             }
-            CdcReadyToPlay();
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));

@@ -21,12 +21,18 @@ typedef struct{
     uint8_t Seconds;
     uint8_t Minutes;
     uint8_t Track;
+    uint8_t Disc;
     uint8_t Reserved;
 } PlayStatusPacket;
 
+typedef enum{
+    STEP0,
+    STEP1,
+    STEP2,
+    READY
+} LoadingState;
+
 void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length);
 void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length);
-void StartDriveInSequence(void);
-void DriveInReading(void);
-void DriveInComplete(void);
 void CdcProtocol_SendPlayStatus(PlayStatus status);
+void ProtocolDriveIn(void);

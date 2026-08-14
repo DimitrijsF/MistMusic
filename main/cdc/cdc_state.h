@@ -7,7 +7,6 @@ typedef enum
     BOOT,
     NO_DISK,
     LOADING,
-    READY,
     EJECTING,
     PLAY,
     STOP
@@ -16,7 +15,6 @@ typedef enum
 CdcState GetCdcState(void);
 void CdcBoot(void);
 void CdcStandby(void);
-void CdcReadDrive(void);
-void CdcReadyToPlay(void);
+void CdcLoadDisk(void);
 void CdcPlay(void);
 void CdcStopPlay(void);

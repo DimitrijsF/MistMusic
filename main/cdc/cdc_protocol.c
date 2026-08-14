@@ -13,9 +13,13 @@
 #include <media/mediaPlayer.h>
 
 static const char *TAG = "CDC_PROTOCOL";
+static LoadingState subState = STEP0;
 
 #pragma region Protocol Packets
 #pragma region Static Methods
+static void SetSubState(LoadingState state);
+static void SendDiskInfo(void);
+
 static void HandleStatus(const uint8_t *packet);
 static void Handle5101(const uint8_t *packet);
 static void HandleStop(const uint8_t *packet);
@@ -45,41 +49,47 @@ static const CdcCommand Commands[] =
     {4, 3, {0x23, 0x00, 0x00}, HandlePlayBack},
     {3, 2, {0x32, 0x01}, HandleTrackSelect},
 };
-#pragma region Drive State
-static const uint8_t ProtoStatusNoDisk[] = {
-    0x72, 0x00, 0x61
-};
-static const uint8_t ProtoStatusDiskLoading[] ={
-    0x72, 0x01, 0x02
-};
-static const uint8_t ProtoStatusDiskReaded[] = {
-    0x72, 0x03, 0x02
-};
+#pragma region Drive packets
 static const uint8_t ProtoStatusDiskInSeq1[] = {
     0x72, 0x00, 0x6C
 };
 static const uint8_t ProtoStatusDiskInSeq2[] = {
     0x72, 0x00, 0x62
 };
-static const uint8_t ProtoStatusReadyToPlay[] = {
-    0x72, 0x07, 0x32
+static const uint8_t ProtoStatusSTEP1[] = {
+    0x72, 0x00, 0x02
+};
+static const uint8_t ProtoStatusSTEP2[] = {
+    0x72, 0x01, 0x02
+};
+static const uint8_t ProtoStatusSTEP3[] = {
+    0x72, 0x03, 0x02
+};
+static const uint8_t ProtoPreDiskInfo[] ={
+    0x73, 0x3D, 0x03, 0x02
 };
 static const uint8_t ProtoTocReady[] ={
     0x72, 0x07, 0x12
 };
-#pragma endregion
-static const uint8_t ProtoAnswer5101[] = {
-    0x42, 0x04, 0x12
+static const uint8_t ProtoStatusReadyToPlay[] = {
+    0x72, 0x07, 0x32
 };
+static const uint8_t ProtoStatusNoDisk[] = {
+    0x72, 0x00, 0x61
+};
+
 static const uint8_t ProtoPlayAnswerLoad[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 static const uint8_t ProtoPlayAnswerReady[] = {
     0x15, 0x00, 0x00, 0x00, 0x01, 0x00
 };
-static const uint8_t ProtoPreDiskInfo[] ={
-    0x73, 0x3D, 0x03, 0x02
+#pragma endregion
+static const uint8_t ProtoAnswer5101[] = {
+    0x42, 0x04, 0x12
 };
+
+
 #pragma endregion
 
 #pragma region PacketProcessors
@@ -89,7 +99,7 @@ void Handle5101(const uint8_t *packet){
 }
 void HandlePlayBack(const uint8_t *packet){
     CdcState state = GetCdcState();
-    if(state != READY && state != PLAY && state != STOP)
+    if(state != PLAY && state != STOP)
         return;
         
     switch(packet[3])
@@ -115,7 +125,6 @@ void HandlePlayBack(const uint8_t *packet){
             break;
     }
 }
-
 void HandleTrackSelect(const uint8_t *packet){
     uint8_t track = packet[2];
     Player_SwitchTrack(track);
@@ -128,10 +137,38 @@ void HandleStop(const uint8_t *packet){
 void HandlePlayModeRequest(const uint8_t *packet){
     (void)packet;
     CdcState state = GetCdcState();
-    if(state == LOADING)
-        CdcUart_Send(ProtoStatusDiskLoading, sizeof(ProtoStatusDiskLoading)); 
-    if(state == READY)
+    if(state == LOADING){
+        switch (subState)
+        {
+        case STEP0: break;
+        case STEP1:
+            CdcUart_Send(ProtoStatusSTEP1, sizeof(ProtoStatusSTEP1)); 
+            SetSubState(STEP2);
+            break;
+        case STEP2:
+            CdcUart_Send(ProtoStatusSTEP2, sizeof(ProtoStatusSTEP2)); 
+            vTaskDelay(pdMS_TO_TICKS(500));
+            CdcUart_Send(ProtoStatusSTEP3, sizeof(ProtoStatusSTEP3)); 
+            vTaskDelay(pdMS_TO_TICKS(500));
+            CdcUart_Send(ProtoPreDiskInfo, sizeof(ProtoPreDiskInfo)); 
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            SendDiskInfo();
+            CdcUart_Send(ProtoTocReady, sizeof(ProtoTocReady)); 
+            CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
+            SetSubState(READY);
+            CdcStopPlay();
+            break;
+        case READY:
+             CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
+            break;
+        default:
+            break;
+        }
+    }   
+    if(state == STOP)
         CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay)); 
+    if(state == NO_DISK)
+        CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk)); 
 }
 void HandleStatus(const uint8_t *packet)
 {
@@ -147,31 +184,48 @@ void HandleStatus(const uint8_t *packet)
         case LOADING: break;
         case EJECTING: break;
         case PLAY: break;
-        case STOP: break; 
-        case READY: 
+        case STOP:
             CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay)); 
             break;
     }
 }
 void HandleLoadingState(const uint8_t *packet){
     (void)packet;
-    if(GetCdcState() == LOADING)
-        CdcUart_Send(ProtoPlayAnswerLoad, sizeof(ProtoPlayAnswerLoad));
-    if(GetCdcState() == READY)
+    if(GetCdcState() == LOADING){
+        if(subState != READY)
+            CdcUart_Send(ProtoPlayAnswerLoad, sizeof(ProtoPlayAnswerLoad));
+        else
+            CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
+    }
+    else if(GetCdcState() == STOP)
         CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
 }
 #pragma endregion
-
-void StartDriveInSequence(void){
-    CdcUart_Send(ProtoStatusDiskInSeq1, sizeof(ProtoStatusDiskInSeq1));
+static const char *StateToString(LoadingState state)
+{
+    switch (state)
+    {
+        case STEP0: return "STEP0";
+        case STEP1:    return "STEP1";
+        case STEP2: return "STEP2";
+        case READY: return "READY";
+        default: return "UNKNOWN";
+    }
 }
-
-void DriveInReading(void){
+static void SetSubState(LoadingState state){
+    ESP_LOGI(TAG,
+         "%s -> %s",
+         StateToString(subState),
+         StateToString(state));
+    subState = state;
+}
+void ProtocolDriveIn(void){
+    CdcUart_Send(ProtoStatusDiskInSeq1, sizeof(ProtoStatusDiskInSeq1));
+    vTaskDelay(pdMS_TO_TICKS(270));
+    SetSubState(STEP1);
     CdcUart_Send(ProtoStatusDiskInSeq2, sizeof(ProtoStatusDiskInSeq2));
 }
-void DriveInComplete(void){
-    CdcUart_Send(ProtoStatusDiskReaded, sizeof(ProtoStatusDiskReaded));
-    CdcUart_Send(ProtoPreDiskInfo, sizeof(ProtoPreDiskInfo));
+static void SendDiskInfo(void){
     TocPacket packet =
     {
         .Command = 0x36,
@@ -183,8 +237,6 @@ void DriveInComplete(void){
         .Reserved = 0x00
     };
     CdcUart_Send((uint8_t *)&packet, sizeof(packet));
-    CdcUart_Send(ProtoTocReady, sizeof(ProtoTocReady));
-    CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
 }
 
 void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length)
@@ -234,6 +286,26 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
 
     uint8_t reply[16];
 
+    // Special ACK for 23 00 00 05 -> E4 00 00 05 23
+    if (length == 4 &&
+        packet[0] == 0x23 &&
+        packet[1] == 0x00 &&
+        packet[2] == 0x00 &&
+        packet[3] == 0x05)
+    {
+        const uint8_t reply[] =
+        {
+            0xE4,
+            0x00,
+            0x00,
+            0x05,
+            0x23
+        };
+
+        CdcUart_Send(reply, sizeof(reply));
+        return;
+    }
+
     reply[0] = 0xE0 | length;
 
     if (packet[0] == 0xDB)
@@ -259,6 +331,7 @@ void CdcProtocol_SendPlayStatus(PlayStatus status){
         .Minutes = status.Minutes,
         .Seconds = status.Seconds,
         .Track = status.Track,
+        .Disc = 0x01,
         .Reserved = 0x01
     };
     CdcUart_Send((uint8_t *)&packet, sizeof(packet));

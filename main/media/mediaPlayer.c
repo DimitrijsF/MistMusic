@@ -3,6 +3,10 @@
 #include "esp_log.h"
 #include <stdio.h>
 #include "esp_timer.h"
+#include "esp_log.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include <cdc/cdc_state.h>
 
@@ -18,6 +22,9 @@ static uint32_t PlayedSamples = 0;
 
 static const char* TAG = "MEDIA_PLAYER";
 
+static void PlayerTask(void *arg);
+static TaskHandle_t playerTaskHandle = NULL;
+
 void Player_SwitchTrack(uint8_t track){
     CdcStopPlay();
     Decoder_Close();
@@ -32,10 +39,25 @@ void Player_SwitchTrack(uint8_t track){
 }
 
 void Player_Play(void){
-    CdcPlay();
-    
+     xTaskCreate(
+        PlayerTask,
+        "CdcUart",
+        4096,
+        NULL,
+        5,
+        &playerTaskHandle);
+}
+static void PlayerTask(void *arg){ 
     if(!Decoder_Open(CurrentTrack))
         return;
+    CdcPlay();
+    PlayStatus status =
+    {
+        .Minutes = 0,
+        .Seconds = 0,
+        .Track = CurrentTrack
+    };
+    CdcProtocol_SendPlayStatus(status);
     while(GetCdcState() == PLAY)
     {   
         switch(MediaDecoder_Step())
@@ -58,6 +80,12 @@ void Player_Play(void){
 void Player_Stop(void){
     CdcStopPlay();
     Decoder_Close();
+    if (playerTaskHandle != NULL)
+    {
+        vTaskDelete(playerTaskHandle);
+        playerTaskHandle = NULL;
+    }
+
 }
 
 void Player_FF(bool enable){

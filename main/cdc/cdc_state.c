@@ -39,7 +39,6 @@ static const char *StateToString(CdcState state)
         case EJECTING: return "EJECTING";
         case PLAY: return "PLAY";
         case STOP: return "STOP";
-        case READY: return "READY";
         default: return "UNKNOWN";
     }
 }
@@ -56,14 +55,9 @@ void CdcStandby(void){
     SetCdcState(STANDBY);
     UartShutDown();
 }
-void CdcReadDrive(void){
+void CdcLoadDisk(void){
     SetCdcState(LOADING);
-    StartDriveInSequence();
-}
-void CdcReadyToPlay(void){
-    SetCdcState(READY);
-    DriveInComplete();
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    ProtocolDriveIn();
 }
 void CdcPlay(void){
     SetCdcState(PLAY);
