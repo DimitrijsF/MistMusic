@@ -20,22 +20,26 @@ static uint8_t CurrentTrack = 1;
 static uint8_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
 
+static volatile bool playerStopRequested = false;
+static volatile bool playerTrackChangeRequested = false;
+static volatile uint8_t requestedTrack = 0;
+
 static const char* TAG = "MEDIA_PLAYER";
 
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
+static void SendPlayStart(void);
 
 void Player_SwitchTrack(uint8_t track){
-    CdcStopPlay();
-    Decoder_Close();
-
     if(track > MediaLibrary_GetCount())
-        CurrentTrack = 1;
+        requestedTrack = 1;
     else
-        CurrentTrack = track;
+        requestedTrack = track;
+
     PlayedSeconds = 0;
     PlayedSamples = 0;
-    Player_Play();
+
+    playerTrackChangeRequested = true;
 }
 
 void Player_Play(void){
@@ -47,10 +51,68 @@ void Player_Play(void){
         5,
         &playerTaskHandle);
 }
-static void PlayerTask(void *arg){ 
+static void PlayerTask(void *arg)
+{
     if(!Decoder_Open(CurrentTrack))
-        return;
+        goto exit;
+
     CdcPlay();
+    SendPlayStart();
+    while(GetCdcState() == PLAY)
+    {
+        if(playerStopRequested)
+        {
+            playerStopRequested = false;
+            goto exit;
+        }
+
+        if(playerTrackChangeRequested)
+        {
+            playerTrackChangeRequested = false;
+            Decoder_Close();
+            CurrentTrack = requestedTrack;
+            if(!Decoder_Open(CurrentTrack))
+                goto exit;
+            CdcPlay();
+            SendPlayStart();
+            continue;
+        }
+
+        switch(MediaDecoder_Step())
+        {
+            case DECODER_OK:
+                break;
+            case DECODER_EOF:
+                ESP_LOGI(TAG, "Switching track...");
+                Decoder_Close();
+                if(CurrentTrack >= MediaLibrary_GetCount())
+                    CurrentTrack = 1;
+                else
+                    CurrentTrack++;
+                PlayedSeconds = 0;
+                PlayedSamples = 0;
+
+                if(!Decoder_Open(CurrentTrack))
+                    goto exit;
+                CdcPlay();
+                SendPlayStart();
+                break;
+
+            case DECODER_ERROR:
+                ESP_LOGE(TAG, "Playback error");
+                goto exit;
+        }
+    }
+
+exit:
+    ESP_LOGI(TAG, "stopping from exit");
+    CdcStopPlay();
+    Decoder_Close();
+    playerTaskHandle = NULL;
+    vTaskDelete(NULL);
+}
+
+static void SendPlayStart(void){
     PlayStatus status =
     {
         .Minutes = 0,
@@ -58,33 +120,13 @@ static void PlayerTask(void *arg){
         .Track = CurrentTrack
     };
     CdcProtocol_SendPlayStatus(status);
-    while(GetCdcState() == PLAY)
-    {   
-        switch(MediaDecoder_Step())
-        {
-            case DECODER_OK:
-                break;
-
-            case DECODER_EOF:      
-                ESP_LOGI(TAG, "Switching track...");
-                Player_SwitchTrack(CurrentTrack + 1);
-                break;
-
-            case DECODER_ERROR:
-                Player_Stop();
-                break;
-        }
-    }
 }
 
 void Player_Stop(void){
-    CdcStopPlay();
-    Decoder_Close();
-    if (playerTaskHandle != NULL)
-    {
-        vTaskDelete(playerTaskHandle);
-        playerTaskHandle = NULL;
-    }
+    ESP_LOGI(TAG, "stopping from Player_Stop");
+    if(GetCdcState() != NO_DISK)
+        CdcStopPlay();
+    playerStopRequested = true;
 
 }
 

@@ -48,7 +48,7 @@ void CdcBoot(void){
     CdcUart_Init();
     vTaskDelay(pdMS_TO_TICKS(750));
     if(MediaLibrary_GetCount() > 0)
-        SetCdcState(STOP);
+        SetCdcState(STOP); 
     else
         SetCdcState(NO_DISK);
 }

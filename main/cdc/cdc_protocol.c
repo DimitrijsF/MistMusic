@@ -172,6 +172,7 @@ void HandlePlayModeRequest(const uint8_t *packet){
             CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
             SetLoadingState(READY);
             SetEjectingState(INIT);
+            ESP_LOGI(TAG, "stopping from insert");
             CdcStopPlay();
             break;
         case READY:

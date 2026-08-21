@@ -119,9 +119,8 @@ bool Output_Start(void)
             OutputChannel,
             &slotConfig));
 
-    ESP_ERROR_CHECK(
-        i2s_channel_enable(
-            OutputChannel));
+    i2s_channel_enable(
+            OutputChannel);
 
     IsStarted = true;
 
@@ -138,11 +137,11 @@ bool Output_Start(void)
 void Output_Stop(void){
     if(!IsStarted)
         return;
-        
+    IsStarted = false;
     ESP_ERROR_CHECK(
     i2s_channel_disable(
         OutputChannel));
-    IsStarted = false;
+    
     ESP_LOGI(TAG, "Media output stopped");
 }
 

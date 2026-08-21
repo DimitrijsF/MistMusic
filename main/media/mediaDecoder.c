@@ -86,6 +86,7 @@ bool Decoder_Open(uint16_t trackNumber)
 
     if(!SkipMetadata(g_File))
     {
+        ESP_LOGI(TAG, "Metadata Error");
         Decoder_Close();
         return false;
     }
@@ -99,6 +100,7 @@ bool Decoder_Open(uint16_t trackNumber)
 
     if(bytesRead == 0)
     {
+        ESP_LOGI(TAG, "0 bytes readed");
         Decoder_Close();
         return false;
     }
@@ -222,6 +224,8 @@ static bool SkipMetadata(FILE *file)
 
 void Decoder_Close(void)
 {
+    Output_Stop();
+
     if(g_File != NULL)
     {
         fclose(g_File);
@@ -240,8 +244,6 @@ void Decoder_Close(void)
     memset(&g_FrameInfo, 0, sizeof(g_FrameInfo));
     memset(g_InputBuffer, 0, sizeof(g_InputBuffer));
     memset(g_PcmBuffer, 0, sizeof(g_PcmBuffer));
-
-    Output_Stop();
 
     ESP_LOGI(TAG, "Playback closed");
 }

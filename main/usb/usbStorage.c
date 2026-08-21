@@ -174,6 +174,7 @@ static void UsbStorageTask(void *arg){
         {
             g_EjectRequested = false;
             Player_Stop();
+            MediaLibrary_Clear();
             if (g_Vfs != NULL)
             {
                 msc_host_vfs_unregister(g_Vfs);
@@ -188,7 +189,7 @@ static void UsbStorageTask(void *arg){
             g_DeviceInstalled = false;
             g_DeviceAddress = 0;
 
-            MediaLibrary_Clear();
+            
 
             ESP_LOGI(TAG, "USB storage ejected");
         }
