@@ -120,6 +120,8 @@ void HandlePlayBack(const uint8_t *packet){
     switch(packet[3])
     {
         case 0x00:
+            if(state == PLAY)
+                break;
             Player_Play();
             break;
 
@@ -292,7 +294,6 @@ static void SendDiskInfo(void){
     };
     CdcUart_Send((uint8_t *)&packet, sizeof(packet));
 }
-
 void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length)
 {
     CdcProtocol_SendAck(packet, length);
@@ -308,7 +309,6 @@ void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length)
         return;
     }
 }
-
 void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
 {
     if (length == 0)
@@ -377,16 +377,45 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
     }
     CdcUart_Send(reply, length + 1);
 }
-
 void CdcProtocol_SendPlayStatus(PlayStatus status){
     PlayStatusPacket packet =
     {
         .Command = 0x15,
         .Minutes = status.Minutes,
         .Seconds = status.Seconds,
-        .Track = status.Track,
         .Disc = 0x01,
+        .Track = status.Track,
         .Reserved = 0x01
     };
     CdcUart_Send((uint8_t *)&packet, sizeof(packet));
+}
+void CdcProtocol_SendPlayReadyPacket(uint8_t track){
+    PlayStatusPacket packet =
+    {
+        .Command = 0x15,
+        .Minutes = 0x00,
+        .Seconds = 0x00,
+        .Disc = 0x00,
+        .Track = track,
+        .Reserved = 0x00
+    };
+    CdcUart_Send((uint8_t *)&packet, sizeof(packet));
+}
+void CdcProtocol_SendPlayStartPacket(uint8_t track){
+    PlayStatusPacket packet =
+    {
+        .Command = 0x15,
+        .Minutes = 0x00,
+        .Seconds = 0x00,
+        .Disc = 0x01,
+        .Track = track,
+        .Reserved = 0x01
+    };
+    CdcUart_Send((uint8_t *)&packet, sizeof(packet));
+}
+void CdcProtocol_SendStatusTocReady(void){
+    CdcUart_Send(ProtoTocReady, sizeof(ProtoTocReady));
+}
+void CdcProtocol_SendStatusPlayReady(void){
+    CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
 }

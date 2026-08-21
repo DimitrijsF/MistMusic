@@ -28,7 +28,6 @@ static const char* TAG = "MEDIA_PLAYER";
 
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
-static void SendPlayStart(void);
 
 void Player_SwitchTrack(uint8_t track){
     if(track > MediaLibrary_GetCount())
@@ -55,9 +54,9 @@ static void PlayerTask(void *arg)
 {
     if(!Decoder_Open(CurrentTrack))
         goto exit;
-
+    CdcProtocol_SendPlayStartPacket(CurrentTrack);
     CdcPlay();
-    SendPlayStart();
+    
     while(GetCdcState() == PLAY)
     {
         if(playerStopRequested)
@@ -73,8 +72,12 @@ static void PlayerTask(void *arg)
             CurrentTrack = requestedTrack;
             if(!Decoder_Open(CurrentTrack))
                 goto exit;
-            CdcPlay();
-            SendPlayStart();
+            CdcProtocol_SendStatusTocReady();
+            CdcProtocol_SendPlayReadyPacket(CurrentTrack);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            CdcProtocol_SendStatusPlayReady();
+            CdcProtocol_SendPlayStartPacket(CurrentTrack);
+            CdcPlay();       
             continue;
         }
 
@@ -82,6 +85,7 @@ static void PlayerTask(void *arg)
         {
             case DECODER_OK:
                 break;
+
             case DECODER_EOF:
                 ESP_LOGI(TAG, "Switching track...");
                 Decoder_Close();
@@ -95,7 +99,7 @@ static void PlayerTask(void *arg)
                 if(!Decoder_Open(CurrentTrack))
                     goto exit;
                 CdcPlay();
-                SendPlayStart();
+
                 break;
 
             case DECODER_ERROR:
@@ -105,29 +109,16 @@ static void PlayerTask(void *arg)
     }
 
 exit:
-    ESP_LOGI(TAG, "stopping from exit");
     CdcStopPlay();
     Decoder_Close();
     playerTaskHandle = NULL;
     vTaskDelete(NULL);
 }
 
-static void SendPlayStart(void){
-    PlayStatus status =
-    {
-        .Minutes = 0,
-        .Seconds = 0,
-        .Track = CurrentTrack
-    };
-    CdcProtocol_SendPlayStatus(status);
-}
-
 void Player_Stop(void){
-    ESP_LOGI(TAG, "stopping from Player_Stop");
     if(GetCdcState() != NO_DISK)
         CdcStopPlay();
     playerStopRequested = true;
-
 }
 
 void Player_FF(bool enable){

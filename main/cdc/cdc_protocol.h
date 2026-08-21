@@ -18,9 +18,9 @@ typedef struct
 typedef struct{
     uint8_t Command;
     uint8_t Seconds;
-    uint8_t Minutes;
-    uint8_t Track;
+    uint8_t Minutes;  
     uint8_t Disc;
+    uint8_t Track;
     uint8_t Reserved;
 } PlayStatusPacket;
 
@@ -40,3 +40,7 @@ void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length);
 void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length);
 void CdcProtocol_SendPlayStatus(PlayStatus status);
 void ProtocolDriveIn(void);
+void CdcProtocol_SendPlayReadyPacket(uint8_t track);
+void CdcProtocol_SendPlayStartPacket(uint8_t track);
+void CdcProtocol_SendStatusTocReady(void);
+void CdcProtocol_SendStatusPlayReady(void);
