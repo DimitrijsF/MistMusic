@@ -136,6 +136,9 @@ bool Output_Start(void)
 }
 
 void Output_Stop(void){
+    if(!IsStarted)
+        return;
+        
     ESP_ERROR_CHECK(
     i2s_channel_disable(
         OutputChannel));
