@@ -18,3 +18,5 @@ void CdcStandby(void);
 void CdcLoadDisk(void);
 void CdcPlay(void);
 void CdcStopPlay(void);
+void CdcEjectStart(void);
+void CdcEjectComplete(void);

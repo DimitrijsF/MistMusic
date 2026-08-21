@@ -10,6 +10,7 @@
 #include <cdc_uart.h>
 #include <media/mediaLibrary.h>
 #include <media/mediaPlayer.h>
+#include <usb/usbStorage.h>
 
 static CdcState State = STANDBY;
 static const char *TAG = "CDC_STATE";
@@ -64,4 +65,11 @@ void CdcPlay(void){
 }
 void CdcStopPlay(void){
     SetCdcState(STOP);
+}
+void CdcEjectStart(void){
+    SetCdcState(EJECTING);
+}
+void CdcEjectComplete(void){
+    SetCdcState(NO_DISK);
+    UsbStorageEject();
 }

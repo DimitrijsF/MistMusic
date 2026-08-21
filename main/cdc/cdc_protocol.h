@@ -13,7 +13,6 @@ typedef struct
     uint8_t Tracks;
     uint8_t Unknown;
     uint8_t Reserved;
-
 } TocPacket;
 
 typedef struct{
@@ -31,6 +30,11 @@ typedef enum{
     STEP2,
     READY
 } LoadingState;
+
+typedef enum{
+    INIT,
+    FINISH
+} EjectingState;
 
 void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length);
 void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length);

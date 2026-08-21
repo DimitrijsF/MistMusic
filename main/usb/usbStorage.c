@@ -234,3 +234,6 @@ esp_err_t UsbStorage_Init(void)
 
     return ESP_OK;
 }
+void UsbStorageEject(void){
+    
+}
