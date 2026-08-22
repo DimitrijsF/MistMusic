@@ -70,10 +70,10 @@ static void PlayerTask(void *arg)
             playerTrackChangeRequested = false;
             Decoder_Close();
             CurrentTrack = requestedTrack;
-            if(!Decoder_Open(CurrentTrack))
-                goto exit;
             CdcProtocol_SendStatusTocReady();
             CdcProtocol_SendPlayReadyPacket(CurrentTrack);
+            if(!Decoder_Open(CurrentTrack))
+                goto exit;
             vTaskDelay(pdMS_TO_TICKS(100));
             CdcProtocol_SendStatusPlayReady();
             CdcProtocol_SendPlayStartPacket(CurrentTrack);
@@ -120,7 +120,11 @@ void Player_Stop(void){
         CdcStopPlay();
     playerStopRequested = true;
 }
-
+void Player_Reset(void){
+    CurrentTrack = 1;
+    PlayedSeconds = 0;
+    PlayedSamples = 0;
+}
 void Player_FF(bool enable){
 
 }

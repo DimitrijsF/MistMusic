@@ -120,8 +120,8 @@ void HandlePlayBack(const uint8_t *packet){
     switch(packet[3])
     {
         case 0x00:
-            if(state == PLAY)
-                break;
+            //if(state == PLAY)
+                //break;
             Player_Play();
             break;
 
@@ -174,6 +174,7 @@ void HandlePlayModeRequest(const uint8_t *packet){
             CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
             SetLoadingState(READY);
             SetEjectingState(INIT);
+            CdcPlay();
             break;
         case READY:
              CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
@@ -225,6 +226,7 @@ static void HandleEjectRequest(const uint8_t *packet){
     SetEjectingState(FINISH);
     SetLoadingState(STEP0);
     CdcEjectComplete();
+    Player_Reset();
 }
 static void HandleDBRequest(const uint8_t *packet){
     (void)packet;
@@ -354,6 +356,18 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
             0x23
         };
 
+        CdcUart_Send(reply, sizeof(reply));
+        return;
+    }
+    
+    if(length == 3 && packet[0] == 0x32){
+        const uint8_t reply[] =
+        {
+            0xE3,
+            packet[1],
+            packet[2],
+            packet[0]
+        };
         CdcUart_Send(reply, sizeof(reply));
         return;
     }
