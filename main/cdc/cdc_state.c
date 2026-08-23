@@ -10,6 +10,7 @@
 #include <cdc_uart.h>
 #include <media/mediaLibrary.h>
 #include <media/mediaPlayer.h>
+#include <usb/usbStorage.h>
 
 static CdcState State = STANDBY;
 static const char *TAG = "CDC_STATE";
@@ -39,16 +40,15 @@ static const char *StateToString(CdcState state)
         case EJECTING: return "EJECTING";
         case PLAY: return "PLAY";
         case STOP: return "STOP";
-        case READY: return "READY";
         default: return "UNKNOWN";
     }
 }
 void CdcBoot(void){
     SetCdcState(BOOT);
     CdcUart_Init();
-    vTaskDelay(pdMS_TO_TICKS(750));
-    if(MediaLibrary_GetCount() > 0)
-        SetCdcState(STOP);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    if(UsbStorage_DriveIn() && !MediaLibrary_IsEmpty())
+        SetCdcState(STOP); 
     else
         SetCdcState(NO_DISK);
 }
@@ -56,18 +56,21 @@ void CdcStandby(void){
     SetCdcState(STANDBY);
     UartShutDown();
 }
-void CdcReadDrive(void){
+void CdcLoadDisk(void){
     SetCdcState(LOADING);
-    StartDriveInSequence();
-}
-void CdcReadyToPlay(void){
-    SetCdcState(READY);
-    DriveInComplete();
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    ProtocolDriveIn();
 }
 void CdcPlay(void){
     SetCdcState(PLAY);
 }
 void CdcStopPlay(void){
+    if(State != NO_DISK)
+        SetCdcState(STOP);
     SetCdcState(STOP);
+}
+void CdcEjectStart(void){
+    SetCdcState(EJECTING);
+}
+void CdcNoDisk(void){
+    SetCdcState(NO_DISK);
 }

@@ -71,6 +71,10 @@ bool Output_Init(void)
     };
 
     stdConfig.slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
+    stdConfig.slot_cfg.bit_shift = false;
+    stdConfig.slot_cfg.left_align = false;
+    stdConfig.slot_cfg.ws_pol = true;
+    stdConfig.slot_cfg.ws_width = 32;
 
     if(i2s_channel_init_std_mode(
             OutputChannel,
@@ -113,15 +117,17 @@ bool Output_Start(void)
             ToSlotMode(OutputFormat.Channels));
 
     slotConfig.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
-
+    slotConfig.bit_shift = false;
+    slotConfig.left_align = false;
+    slotConfig.ws_pol = true;
+    slotConfig.ws_width = 32;
     ESP_ERROR_CHECK(
         i2s_channel_reconfig_std_slot(
             OutputChannel,
             &slotConfig));
 
-    ESP_ERROR_CHECK(
-        i2s_channel_enable(
-            OutputChannel));
+    i2s_channel_enable(
+            OutputChannel);
 
     IsStarted = true;
 
@@ -136,10 +142,13 @@ bool Output_Start(void)
 }
 
 void Output_Stop(void){
+    if(!IsStarted)
+        return;
+    IsStarted = false;
     ESP_ERROR_CHECK(
     i2s_channel_disable(
         OutputChannel));
-    IsStarted = false;
+    
     ESP_LOGI(TAG, "Media output stopped");
 }
 

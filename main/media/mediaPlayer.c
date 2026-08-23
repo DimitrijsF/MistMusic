@@ -3,6 +3,10 @@
 #include "esp_log.h"
 #include <stdio.h>
 #include "esp_timer.h"
+#include "esp_log.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include <cdc/cdc_state.h>
 
@@ -10,56 +14,124 @@
 
 #include <media/mediaPlayer.h>
 #include <media/mediaLibrary.h>
+#include <media/mediaOutput.h>
 #include <mediaDecoder.h>
 
 static uint8_t CurrentTrack = 1;
 static uint8_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
 
+static volatile bool playerStopRequested = false;
+static volatile bool playerTrackChangeRequested = false;
+static volatile uint8_t requestedTrack = 0;
+
 static const char* TAG = "MEDIA_PLAYER";
 
-void Player_SwitchTrack(uint8_t track){
-    CdcStopPlay();
-    Decoder_Close();
+static void PlayerTask(void *arg);
+static TaskHandle_t playerTaskHandle = NULL;
 
+void Player_SwitchTrack(uint8_t track){
     if(track > MediaLibrary_GetCount())
-        CurrentTrack = 1;
+        requestedTrack = 1;
     else
-        CurrentTrack = track;
+        requestedTrack = track;
+
     PlayedSeconds = 0;
     PlayedSamples = 0;
-    Player_Play();
+
+    playerTrackChangeRequested = true;
 }
 
 void Player_Play(void){
+    playerStopRequested = false;
+    playerTrackChangeRequested = false;
+     xTaskCreate(
+        PlayerTask,
+        "CdcUart",
+        4096,
+        NULL,
+        5,
+        &playerTaskHandle);
+}
+static void PlayerTask(void *arg)
+{
+    if(!Decoder_Open(CurrentTrack))
+        goto exit;
+    CdcProtocol_SendPlayStartPacket(CurrentTrack);
     CdcPlay();
     
-    if(!Decoder_Open(CurrentTrack))
-        return;
     while(GetCdcState() == PLAY)
-    {   
+    {
+        if(playerStopRequested)
+        {
+            playerStopRequested = false;
+            goto exit;
+        }
+
+        if(playerTrackChangeRequested)
+        {
+            playerTrackChangeRequested = false;
+            Decoder_Close();
+            CurrentTrack = requestedTrack;
+            CdcProtocol_SendStatusTocReady();
+            CdcProtocol_SendPlayReadyPacket(CurrentTrack);
+            if(!Decoder_Open(CurrentTrack))
+                goto exit;
+            vTaskDelay(pdMS_TO_TICKS(100));
+            CdcProtocol_SendStatusPlayReady();
+            CdcProtocol_SendPlayStartPacket(CurrentTrack);
+            CdcPlay();       
+            continue;
+        }
+
         switch(MediaDecoder_Step())
         {
             case DECODER_OK:
                 break;
 
-            case DECODER_EOF:      
-                ESP_LOGI(TAG, "Switching track...");
-                Player_SwitchTrack(CurrentTrack + 1);
+            case DECODER_EOF:
+                Decoder_Close();
+                if(CurrentTrack >= MediaLibrary_GetCount())
+                    CurrentTrack = 1;
+                else
+                    CurrentTrack++;
+                PlayedSeconds = 0;
+                PlayedSamples = 0;
+
+                if(!Decoder_Open(CurrentTrack))
+                    goto exit;
+                CdcPlay();
+
                 break;
 
             case DECODER_ERROR:
-                Player_Stop();
-                break;
+                ESP_LOGE(TAG, "Playback error");
+                Player_SwitchTrack(CurrentTrack + 1);
+                continue;
         }
     }
+
+exit:
+    CdcStopPlay();
+    Decoder_Close();
+    Output_Stop();
+    PlayedSeconds = 0;
+    PlayedSamples = 0;
+    playerTaskHandle = NULL;
+    playerStopRequested = false;
+    playerTrackChangeRequested = false;
+    vTaskDelete(NULL);
 }
 
 void Player_Stop(void){
-    CdcStopPlay();
-    Decoder_Close();
+    if(GetCdcState() != NO_DISK)
+        playerStopRequested = true;
 }
-
+void Player_Reset(void){
+    CurrentTrack = 1;
+    PlayedSeconds = 0;
+    PlayedSamples = 0;
+}
 void Player_FF(bool enable){
 
 }

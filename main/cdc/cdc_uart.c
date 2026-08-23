@@ -84,7 +84,7 @@ void UartShutDown(void)
 
 void CdcUart_Send(const uint8_t *data, size_t length)
 {
-    vTaskDelay(pdMS_TO_TICKS(20));
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     uart_write_bytes(CDC_UART_PORT, data, length);
 
