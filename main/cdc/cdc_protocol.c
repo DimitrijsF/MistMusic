@@ -11,6 +11,7 @@
 #include <cdc/cdc_state.h>
 #include <media/mediaLibrary.h>
 #include <media/mediaPlayer.h>
+#include <usb/usbStorage.h>
 
 static const char *TAG = "CDC_PROTOCOL";
 static LoadingState loadingState = STEP0;
@@ -225,7 +226,7 @@ static void HandleEjectRequest(const uint8_t *packet){
     CdcUart_Send(ProtoStatusEjecting2, sizeof(ProtoStatusEjecting2));
     SetEjectingState(FINISH);
     SetLoadingState(STEP0);
-    CdcEjectComplete();
+    UsbStorageEject();
     Player_Reset();
 }
 static void HandleDBRequest(const uint8_t *packet){
@@ -237,7 +238,7 @@ static void HandleDBRequest(const uint8_t *packet){
         CdcUart_Send(ProtoStatusDiskEjectingSeq, sizeof(ProtoStatusDiskEjectingSeq));
         vTaskDelay(pdMS_TO_TICKS(1000));
         CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk));
-        CdcEjectComplete();
+        CdcNoDisk();
     }
 }
 #pragma endregion

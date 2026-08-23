@@ -46,8 +46,8 @@ static const char *StateToString(CdcState state)
 void CdcBoot(void){
     SetCdcState(BOOT);
     CdcUart_Init();
-    vTaskDelay(pdMS_TO_TICKS(750));
-    if(MediaLibrary_GetCount() > 0)
+    vTaskDelay(pdMS_TO_TICKS(500));
+    if(UsbStorage_DriveIn() && !MediaLibrary_IsEmpty())
         SetCdcState(STOP); 
     else
         SetCdcState(NO_DISK);
@@ -69,7 +69,6 @@ void CdcStopPlay(void){
 void CdcEjectStart(void){
     SetCdcState(EJECTING);
 }
-void CdcEjectComplete(void){
+void CdcNoDisk(void){
     SetCdcState(NO_DISK);
-    UsbStorageEject();
 }

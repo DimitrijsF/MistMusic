@@ -14,6 +14,7 @@
 
 #include <media/mediaPlayer.h>
 #include <media/mediaLibrary.h>
+#include <media/mediaOutput.h>
 #include <mediaDecoder.h>
 
 static uint8_t CurrentTrack = 1;
@@ -111,6 +112,9 @@ static void PlayerTask(void *arg)
 exit:
     CdcStopPlay();
     Decoder_Close();
+    Output_Stop();
+    PlayedSeconds = 0;
+    PlayedSamples = 0;
     playerTaskHandle = NULL;
     vTaskDelete(NULL);
 }

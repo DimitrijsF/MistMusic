@@ -224,8 +224,6 @@ static bool SkipMetadata(FILE *file)
 
 void Decoder_Close(void)
 {
-    Output_Stop();
-
     if(g_File != NULL)
     {
         fclose(g_File);

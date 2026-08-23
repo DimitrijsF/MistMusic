@@ -42,6 +42,7 @@ static void StorageCallback(const msc_host_event_t *event, void *arg)
         case MSC_DEVICE_DISCONNECTED:
             g_DeviceConnected = false;
             g_DeviceDisconnectRequested = true;
+            MediaLibrary_Clear();
             ESP_LOGI(TAG, "MSC device disconnected");
         break;
 
@@ -189,8 +190,6 @@ static void UsbStorageTask(void *arg){
             g_DeviceInstalled = false;
             g_DeviceAddress = 0;
 
-            
-
             ESP_LOGI(TAG, "USB storage ejected");
         }
         if (g_DeviceDisconnectRequested)
@@ -267,4 +266,7 @@ esp_err_t UsbStorage_Init(void)
 }
 void UsbStorageEject(void){
      g_EjectRequested = true;
+}
+bool UsbStorage_DriveIn(void){
+    return g_DeviceInstalled;
 }

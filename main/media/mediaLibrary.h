@@ -26,3 +26,4 @@ void MediaLibrary_AddTrack(MediaSource source, const char *path);
 void MediaLibrary_Clear(void);
 uint16_t MediaLibrary_GetCount(void);
 MediaTrack *MediaLibrary_GetTrack(uint16_t number);
+bool MediaLibrary_IsEmpty(void);

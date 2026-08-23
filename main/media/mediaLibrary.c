@@ -8,6 +8,7 @@
 
 static MediaTrack g_Tracks[MEDIA_LIBRARY_MAX_TRACKS];
 static uint16_t g_TrackCount = 0;
+static bool IsEmpty = true;
 
 static const char* TAG = "MEDIA_LIBRARY";
 
@@ -46,10 +47,12 @@ void MediaLibrary_AddTrack(MediaSource source, const char *path)
     track->Path[sizeof(track->Path) - 1] = '\0';
 
     g_TrackCount++;
+    IsEmpty = false;
 }
 
 void MediaLibrary_Clear(void){
     g_TrackCount = 0;
+    IsEmpty = true;
 }
 
 uint16_t MediaLibrary_GetCount(void){
@@ -62,4 +65,7 @@ MediaTrack *MediaLibrary_GetTrack(uint16_t number){
     else{
         return &g_Tracks[number - 1];
     }
+}
+bool MediaLibrary_IsEmpty(void){
+    return IsEmpty;
 }
