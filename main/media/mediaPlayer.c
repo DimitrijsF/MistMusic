@@ -43,6 +43,8 @@ void Player_SwitchTrack(uint8_t track){
 }
 
 void Player_Play(void){
+    playerStopRequested = false;
+    playerTrackChangeRequested = false;
      xTaskCreate(
         PlayerTask,
         "CdcUart",
@@ -88,7 +90,6 @@ static void PlayerTask(void *arg)
                 break;
 
             case DECODER_EOF:
-                ESP_LOGI(TAG, "Switching track...");
                 Decoder_Close();
                 if(CurrentTrack >= MediaLibrary_GetCount())
                     CurrentTrack = 1;
@@ -105,7 +106,8 @@ static void PlayerTask(void *arg)
 
             case DECODER_ERROR:
                 ESP_LOGE(TAG, "Playback error");
-                goto exit;
+                Player_SwitchTrack(CurrentTrack + 1);
+                continue;
         }
     }
 
@@ -116,13 +118,14 @@ exit:
     PlayedSeconds = 0;
     PlayedSamples = 0;
     playerTaskHandle = NULL;
+    playerStopRequested = false;
+    playerTrackChangeRequested = false;
     vTaskDelete(NULL);
 }
 
 void Player_Stop(void){
     if(GetCdcState() != NO_DISK)
-        CdcStopPlay();
-    playerStopRequested = true;
+        playerStopRequested = true;
 }
 void Player_Reset(void){
     CurrentTrack = 1;

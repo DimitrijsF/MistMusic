@@ -64,6 +64,8 @@ void CdcPlay(void){
     SetCdcState(PLAY);
 }
 void CdcStopPlay(void){
+    if(State != NO_DISK)
+        SetCdcState(STOP);
     SetCdcState(STOP);
 }
 void CdcEjectStart(void){

@@ -104,8 +104,6 @@ static const uint8_t ProtoPlayAnswerReady[] = {
 static const uint8_t ProtoAnswer5101[] = {
     0x42, 0x04, 0x12
 };
-
-
 #pragma endregion
 
 #pragma region PacketProcessors
@@ -121,8 +119,6 @@ void HandlePlayBack(const uint8_t *packet){
     switch(packet[3])
     {
         case 0x00:
-            //if(state == PLAY)
-                //break;
             Player_Play();
             break;
 
@@ -150,7 +146,10 @@ void HandleTrackSelect(const uint8_t *packet){
 void HandleStop(const uint8_t *packet){
     (void)packet;
     if(GetCdcState() == PLAY)
+    {
         Player_Stop();
+        CdcStopPlay();
+    }
 }
 void HandlePlayModeRequest(const uint8_t *packet){
     (void)packet;
@@ -158,29 +157,29 @@ void HandlePlayModeRequest(const uint8_t *packet){
     if(state == LOADING){
         switch (loadingState)
         {
-        case STEP0: break;
-        case STEP1:
-            CdcUart_Send(ProtoStatusSTEP1, sizeof(ProtoStatusSTEP1)); 
-            SetLoadingState(STEP2);
+            case STEP0: break;
+            case STEP1:
+                CdcUart_Send(ProtoStatusSTEP1, sizeof(ProtoStatusSTEP1)); 
+                SetLoadingState(STEP2);
             break;
-        case STEP2:
-            CdcUart_Send(ProtoStatusSTEP2, sizeof(ProtoStatusSTEP2)); 
-            vTaskDelay(pdMS_TO_TICKS(500));
-            CdcUart_Send(ProtoStatusSTEP3, sizeof(ProtoStatusSTEP3)); 
-            vTaskDelay(pdMS_TO_TICKS(500));
-            CdcUart_Send(ProtoPreDiskInfo, sizeof(ProtoPreDiskInfo)); 
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            SendDiskInfo();
-            CdcUart_Send(ProtoTocReady, sizeof(ProtoTocReady)); 
-            CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
-            SetLoadingState(READY);
-            SetEjectingState(INIT);
-            CdcPlay();
+            case STEP2:
+                CdcUart_Send(ProtoStatusSTEP2, sizeof(ProtoStatusSTEP2)); 
+                vTaskDelay(pdMS_TO_TICKS(500));
+                CdcUart_Send(ProtoStatusSTEP3, sizeof(ProtoStatusSTEP3)); 
+                vTaskDelay(pdMS_TO_TICKS(500));
+                CdcUart_Send(ProtoPreDiskInfo, sizeof(ProtoPreDiskInfo)); 
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                SendDiskInfo();
+                CdcUart_Send(ProtoTocReady, sizeof(ProtoTocReady)); 
+                CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
+                SetLoadingState(READY);
+                SetEjectingState(INIT);
+                CdcStopPlay();
             break;
-        case READY:
-             CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
+            case READY:
+                CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
             break;
-        default:
+            default:
             break;
         }
     }   
@@ -221,6 +220,7 @@ void HandleLoadingState(const uint8_t *packet){
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
     Player_Stop();
+    CdcStopPlay();
     CdcEjectStart();
     CdcUart_Send(ProtoStatusEjecting1, sizeof(ProtoStatusEjecting1));
     CdcUart_Send(ProtoStatusEjecting2, sizeof(ProtoStatusEjecting2));
