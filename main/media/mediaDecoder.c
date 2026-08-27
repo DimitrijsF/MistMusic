@@ -63,12 +63,17 @@ static bool FillBuffer(void)
 
 bool Decoder_Open(uint16_t trackNumber)
 {
-    MediaTrack *track = MediaLibrary_GetTrack(trackNumber);
+    MediaTrack *track =
+        MediaLibrary_GetTrack(trackNumber);
 
     if(track == NULL)
         return false;
 
-    ESP_LOGI(TAG, "Playing %s, Track number %u", track->Path, trackNumber);
+    ESP_LOGI(
+        TAG,
+        "Playing %s, Track number %u",
+        track->Path,
+        trackNumber);
 
     g_Decoder = MP3InitDecoder();
 
@@ -81,13 +86,16 @@ bool Decoder_Open(uint16_t trackNumber)
     {
         MP3FreeDecoder(g_Decoder);
         g_Decoder = NULL;
+
         return false;
     }
 
     if(!SkipMetadata(g_File))
     {
-        ESP_LOGI(TAG, "Metadata Error");
+        ESP_LOGE(TAG, "Metadata error");
+
         Decoder_Close();
+
         return false;
     }
 
@@ -100,15 +108,45 @@ bool Decoder_Open(uint16_t trackNumber)
 
     if(bytesRead == 0)
     {
-        ESP_LOGI(TAG, "0 bytes readed");
+        ESP_LOGE(TAG, "0 bytes read");
+
         Decoder_Close();
+
         return false;
     }
 
     g_ReadPtr = g_InputBuffer;
     g_BytesLeft = bytesRead;
 
-    memset(&g_FrameInfo, 0, sizeof(g_FrameInfo));
+    int syncOffset =
+        MP3FindSyncWord(
+            g_InputBuffer,
+            g_BytesLeft);
+
+    if(syncOffset < 0)
+    {
+        ESP_LOGE(
+            TAG,
+            "MP3 sync word not found");
+
+        Decoder_Close();
+
+        return false;
+    }
+
+    ESP_LOGI(
+        TAG,
+        "MP3 sync found at offset %d",
+        syncOffset);
+
+    g_ReadPtr += syncOffset;
+    g_BytesLeft -= syncOffset;
+
+    memset(
+        &g_FrameInfo,
+        0,
+        sizeof(g_FrameInfo));
+
     return true;
 }
 
@@ -125,25 +163,30 @@ static DecoderResult Decoder_DecodeFrame(void)
     switch(result)
     {
         case ERR_MP3_NONE:
+        {
             MP3GetLastFrameInfo(
                 g_Decoder,
                 &g_FrameInfo);
-            
-            if(!Output_IsStarted()){
-                MediaOutputFormat format = {
+
+            if(!Output_IsStarted())
+            {
+                ESP_LOGI(TAG, "First PCM frame of new track");
+                MediaOutputFormat format =
+                {
                     .Channels = g_FrameInfo.nChans,
                     .SampleRate = g_FrameInfo.samprate,
                     .Bits = 16
                 };
-                 
+
                 Output_SetFormat(format);
                 Output_Start();
             }
-            
+
             Player_UpdateTime(
-                    g_FrameInfo.outputSamps / g_FrameInfo.nChans,
-                    g_FrameInfo.samprate);
-            
+                g_FrameInfo.outputSamps /
+                    g_FrameInfo.nChans,
+                g_FrameInfo.samprate);
+
             if(!Output_Write(
                 Decoder_GetPcmBuffer(),
                 g_FrameInfo.outputSamps))
@@ -152,36 +195,66 @@ static DecoderResult Decoder_DecodeFrame(void)
             }
 
             return DECODER_OK;
+        }
+
+        case ERR_MP3_MAINDATA_UNDERFLOW:
+            ESP_LOGW(
+                TAG,
+                "MP3 main data underflow, continuing");
+
+            return DECODER_OK;
 
         case ERR_MP3_INVALID_FRAMEHEADER:
+        {
+            int syncOffset =
+                MP3FindSyncWord(
+                    g_ReadPtr + 1,
+                    g_BytesLeft > 1
+                        ? g_BytesLeft - 1
+                        : 0);
+
+            if(syncOffset >= 0)
+            {
+                syncOffset++;
+
+                ESP_LOGW(
+                    TAG,
+                    "Invalid frame header, next sync at +%d",
+                    syncOffset);
+
+                g_ReadPtr += syncOffset;
+                g_BytesLeft -= syncOffset;
+
+                return DECODER_OK;
+            }
 
             if(feof(g_File))
             {
                 ESP_LOGI(TAG, "Track finished");
                 return DECODER_EOF;
             }
-            break;
+            return DECODER_OK;
+        }
 
         default:
-            break;
+            ESP_LOGE(
+                TAG,
+                "Decode error: %d",
+                result);
+
+            return DECODER_ERROR;
     }
-
-    ESP_LOGE(
-        TAG,
-        "Decode error: %d",
-        result);
-
-    return DECODER_ERROR;
 }
 
 DecoderResult MediaDecoder_Step(void)
 {
     if(g_BytesLeft < MP3_REFILL_THRESHOLD)
     {
-        if(!FillBuffer())
+        bool readMore = FillBuffer();
+
+        if(!readMore && g_BytesLeft == 0)
         {
-            if(g_BytesLeft == 0)
-                return DECODER_EOF;
+            return DECODER_EOF;
         }
     }
 

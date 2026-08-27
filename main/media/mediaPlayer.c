@@ -18,7 +18,7 @@
 #include <mediaDecoder.h>
 
 static uint8_t CurrentTrack = 1;
-static uint8_t PlayedSeconds = 0;
+static uint32_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
 
 static volatile bool playerStopRequested = false;
@@ -71,16 +71,30 @@ static void PlayerTask(void *arg)
         if(playerTrackChangeRequested)
         {
             playerTrackChangeRequested = false;
+
+            ESP_LOGI(TAG, "Track change: closing decoder");
             Decoder_Close();
+
             CurrentTrack = requestedTrack;
+
+            ESP_LOGI(TAG, "Track change: sending protocol packets");
+
             CdcProtocol_SendStatusTocReady();
             CdcProtocol_SendPlayReadyPacket(CurrentTrack);
+
             if(!Decoder_Open(CurrentTrack))
                 goto exit;
+
+            ESP_LOGI(TAG, "Track change: protocol delay");
+
             vTaskDelay(pdMS_TO_TICKS(100));
+
+            ESP_LOGI(TAG, "Track change: starting new track");
+
             CdcProtocol_SendStatusPlayReady();
             CdcProtocol_SendPlayStartPacket(CurrentTrack);
-            CdcPlay();       
+            CdcPlay();
+
             continue;
         }
 
@@ -152,8 +166,8 @@ void Player_UpdateTime(uint16_t samples, uint32_t sampleRate){
 
     PlayedSeconds = second;
 
-    uint8_t Minutes = second / 60;
-    uint8_t Seconds = second % 60;
+    uint32_t Minutes = second / 60;
+    uint32_t Seconds = second % 60;
 
     PlayStatus status =
     {
@@ -161,5 +175,6 @@ void Player_UpdateTime(uint16_t samples, uint32_t sampleRate){
         .Seconds = Seconds,
         .Track = CurrentTrack
     };
+    
     CdcProtocol_SendPlayStatus(status);
 }
