@@ -11,6 +11,7 @@
 #include <media/mediaLibrary.h>
 #include <media/mediaPlayer.h>
 #include <usb/usbStorage.h>
+#include <wifi/wifiCore.h>
 
 static CdcState State = STANDBY;
 static const char *TAG = "CDC_STATE";
@@ -51,10 +52,13 @@ void CdcBoot(void){
         SetCdcState(STOP); 
     else
         SetCdcState(NO_DISK);
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    WifiCore_Init();
 }
 void CdcStandby(void){
     SetCdcState(STANDBY);
     UartShutDown();
+    WifiCore_Close();
 }
 void CdcLoadDisk(void){
     SetCdcState(LOADING);

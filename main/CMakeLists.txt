@@ -15,6 +15,8 @@ idf_component_register(
         "cdc/cdc_uart.c"     
         "cdc/cdc.c"
 
+        "wifi/wifiCore.c"
+
         "components/mp3dec.c"
         "components/mp3tabs.c"
 
@@ -30,14 +32,13 @@ idf_component_register(
         "components/real/scalfact.c"
         "components/real/stproc.c"
         "components/real/subband.c"
-        "components/real/trigtabs.c"
-
-               
+        "components/real/trigtabs.c"               
     INCLUDE_DIRS
         "."
         "usb"
         "media"
         "cdc"
+        "wifi"
         "components/pub"
         "components/real"
 )
