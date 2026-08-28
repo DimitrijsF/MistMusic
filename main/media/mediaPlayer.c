@@ -17,9 +17,6 @@
 #include <media/mediaOutput.h>
 #include <mediaDecoder.h>
 
-#define TRACKS_PER_PAGE 127
-#define SWITCH_TRACK_NUMBER 128
-
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
@@ -177,7 +174,6 @@ static void PlayerTask(void *arg)
             Decoder_Close();
             CdcProtocol_SendStatusTocReady();
             CdcProtocol_SendPlayReadyPacket(requestedHeadTrack);
-            vTaskDelay(pdMS_TO_TICKS(100));
             CdcProtocol_SendStatusPlayReady();
             CdcProtocol_SendPlayStartPacket(requestedHeadTrack);
             CurrentPage = requestedPage;

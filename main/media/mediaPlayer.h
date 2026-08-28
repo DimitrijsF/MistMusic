@@ -3,6 +3,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#define TRACKS_PER_PAGE 125
+#define SWITCH_TRACK_NUMBER 126
+
 typedef struct
 {
     uint8_t Minutes;
