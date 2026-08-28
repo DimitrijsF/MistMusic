@@ -58,6 +58,12 @@ void MediaLibrary_Clear(void){
 uint16_t MediaLibrary_GetCount(void){
     return g_TrackCount;
 }
+uint16_t MediaLibrary_GetVirtualCount(void){
+    if(g_TrackCount >= 128)
+        return 128;
+    else 
+        return g_TrackCount;
+}
 
 MediaTrack *MediaLibrary_GetTrack(uint16_t number){
     if(number - 1 > g_TrackCount || number - 1 < 0)

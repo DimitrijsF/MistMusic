@@ -289,7 +289,7 @@ static void SendDiskInfo(void){
         .LeadOut1 = 0x05,
         .LeadOut2 = 0x1D,
         .LeadOut3 = 0x40,
-        .Tracks = MediaLibrary_GetCount(),
+        .Tracks = MediaLibrary_GetVirtualCount(),
         .Unknown = 0x01,
         .Reserved = 0x00
     };
@@ -341,7 +341,6 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
 
     uint8_t reply[16];
 
-    // Special ACK for 23 00 00 05 -> E4 00 00 05 23
     if (length == 4 &&
         packet[0] == 0x23 &&
         packet[1] == 0x00 &&

@@ -17,12 +17,17 @@
 #include <media/mediaOutput.h>
 #include <mediaDecoder.h>
 
+#define TRACKS_PER_PAGE 127
+#define SWITCH_TRACK_NUMBER 128
+
+static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
 
 static volatile bool playerStopRequested = false;
 static volatile bool playerTrackChangeRequested = false;
+static volatile uint8_t requestedPage = 0;
 static volatile uint8_t requestedTrack = 0;
 
 static const char* TAG = "MEDIA_PLAYER";
@@ -30,11 +35,74 @@ static const char* TAG = "MEDIA_PLAYER";
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
 
-void Player_SwitchTrack(uint8_t track){
-    if(track > MediaLibrary_GetCount())
-        requestedTrack = 1;
+static uint16_t Player_GetRealTrackByPosition(
+    uint8_t page,
+    uint8_t track)
+{
+    return page * TRACKS_PER_PAGE + track;
+}
+static uint16_t Player_GetRealTrack()
+{
+    return CurrentPage * TRACKS_PER_PAGE + CurrentTrack;
+}
+static void Player_CalcTrackSwitch(void)
+{
+    uint16_t trackCount = MediaLibrary_GetCount();
+    requestedPage = CurrentPage;
+    if(CurrentTrack == TRACKS_PER_PAGE)
+    {
+        uint16_t nextPageFirstTrack =
+            (CurrentPage + 1) * TRACKS_PER_PAGE + 1;
+        if(nextPageFirstTrack <= trackCount)
+        {
+            requestedPage = CurrentPage + 1;
+            requestedTrack = 1;
+        }
+        else
+        {
+            requestedPage = 0;
+            requestedTrack = 1;
+        }
+        return;
+    }
+    if(CurrentTrack == 1)
+    {
+        if(CurrentPage == 0)
+        {
+            uint16_t lastRealTrack = trackCount - 1;
+            requestedPage =
+                lastRealTrack / TRACKS_PER_PAGE;
+            requestedTrack =
+                (lastRealTrack % TRACKS_PER_PAGE) + 1;
+        }
+        else
+        {
+            requestedPage = CurrentPage - 1;
+            requestedTrack = TRACKS_PER_PAGE;
+        }
+        return;
+    }
+    requestedTrack = CurrentTrack;
+}
+void Player_SwitchTrack(uint8_t track)
+{
+    requestedPage = CurrentPage;
+    if(track == SWITCH_TRACK_NUMBER)
+        Player_CalcTrackSwitch();
     else
-        requestedTrack = track;
+    {
+        uint16_t requestedRealTrack =
+            Player_GetRealTrackByPosition(
+                CurrentPage,
+                track);
+        if(requestedRealTrack > MediaLibrary_GetCount())
+        {
+            requestedPage = 0;
+            requestedTrack = 1;
+        }
+        else
+            requestedTrack = track;
+    }
 
     PlayedSeconds = 0;
     PlayedSamples = 0;
@@ -55,7 +123,7 @@ void Player_Play(void){
 }
 static void PlayerTask(void *arg)
 {
-    if(!Decoder_Open(CurrentTrack))
+    if(!Decoder_Open(Player_GetRealTrack()))
         goto exit;
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
     CdcPlay();
@@ -67,34 +135,20 @@ static void PlayerTask(void *arg)
             playerStopRequested = false;
             goto exit;
         }
-
         if(playerTrackChangeRequested)
         {
             playerTrackChangeRequested = false;
-
-            ESP_LOGI(TAG, "Track change: closing decoder");
             Decoder_Close();
-
+            CurrentPage = requestedPage;
             CurrentTrack = requestedTrack;
-
-            ESP_LOGI(TAG, "Track change: sending protocol packets");
-
             CdcProtocol_SendStatusTocReady();
             CdcProtocol_SendPlayReadyPacket(CurrentTrack);
-
-            if(!Decoder_Open(CurrentTrack))
+            if(!Decoder_Open(Player_GetRealTrack()))
                 goto exit;
-
-            ESP_LOGI(TAG, "Track change: protocol delay");
-
             vTaskDelay(pdMS_TO_TICKS(100));
-
-            ESP_LOGI(TAG, "Track change: starting new track");
-
             CdcProtocol_SendStatusPlayReady();
             CdcProtocol_SendPlayStartPacket(CurrentTrack);
             CdcPlay();
-
             continue;
         }
 
@@ -105,19 +159,24 @@ static void PlayerTask(void *arg)
 
             case DECODER_EOF:
                 Decoder_Close();
-                if(CurrentTrack >= MediaLibrary_GetCount())
-                    CurrentTrack = 1;
-                else
-                    CurrentTrack++;
-                PlayedSeconds = 0;
-                PlayedSamples = 0;
-
-                if(!Decoder_Open(CurrentTrack))
-                    goto exit;
-                CdcPlay();
-
-                break;
-
+            if(Player_GetRealTrack() >= MediaLibrary_GetCount())
+            {
+                CurrentPage = 0;
+                CurrentTrack = 1;
+            }
+            else if(CurrentTrack >= TRACKS_PER_PAGE)
+            {
+                CurrentPage++;
+                CurrentTrack = 1;
+            }  
+            else
+                CurrentTrack++;
+            PlayedSeconds = 0;
+            PlayedSamples = 0;
+            if(!Decoder_Open(Player_GetRealTrack()))
+                goto exit;
+            CdcPlay();
+            break;  
             case DECODER_ERROR:
                 ESP_LOGE(TAG, "Playback error");
                 Player_SwitchTrack(CurrentTrack + 1);
@@ -142,6 +201,7 @@ void Player_Stop(void){
         playerStopRequested = true;
 }
 void Player_Reset(void){
+    CurrentPage = 0;
     CurrentTrack = 1;
     PlayedSeconds = 0;
     PlayedSamples = 0;
