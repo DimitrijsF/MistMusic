@@ -27,6 +27,8 @@ static volatile bool playerTrackChangeRequested = false;
 static volatile uint8_t requestedPage = 0;
 static volatile uint8_t requestedTrack = 0;
 static volatile uint8_t requestedHeadTrack = 0;
+static long ResumePosition = -1;
+static uint16_t ResumeTrack = 0;
 
 static const char* TAG = "MEDIA_PLAYER";
 
@@ -49,8 +51,7 @@ static void Player_CalcTrackSwitch(void)
     requestedPage = CurrentPage;
     if(CurrentTrack == TRACKS_PER_PAGE)
     {
-        uint16_t nextPageFirstTrack =
-            (CurrentPage + 1) * TRACKS_PER_PAGE + 1;
+        uint16_t nextPageFirstTrack = (CurrentPage + 1) * TRACKS_PER_PAGE + 1;
         if(nextPageFirstTrack <= trackCount)
         {
             requestedPage = CurrentPage + 1;
@@ -88,15 +89,10 @@ void Player_SwitchTrack(uint8_t track)
     requestedPage = CurrentPage;
 
     if(track == SWITCH_TRACK_NUMBER)
-    {
         Player_CalcTrackSwitch();
-    }
     else
     {
-        uint16_t requestedRealTrack =
-            Player_GetRealTrackByPosition(
-                CurrentPage,
-                track);
+        uint16_t requestedRealTrack = Player_GetRealTrackByPosition(CurrentPage, track);
         if(requestedRealTrack > MediaLibrary_GetCount())
         {
             requestedPage = 0;
@@ -143,20 +139,45 @@ static bool Player_CalcNextTrack(
 }
 
 void Player_Play(void){
+    if(playerTaskHandle != NULL)
+        return;
     playerStopRequested = false;
     playerTrackChangeRequested = false;
-     xTaskCreate(
-        PlayerTask,
-        "CdcUart",
-        4096,
-        NULL,
-        5,
-        &playerTaskHandle);
+    BaseType_t result =
+        xTaskCreate(
+            PlayerTask,
+            "PlayerTask",
+            4096,
+            NULL,
+            5,
+            &playerTaskHandle);
+
+    if(result != pdPASS)
+    {
+        ESP_LOGE(TAG, "Failed to create player task");
+        playerTaskHandle = NULL;
+    }
 }
 static void PlayerTask(void *arg)
 {
-    if(!Decoder_Open(Player_GetRealTrack()))
-        goto exit;
+    uint16_t realTrack = Player_GetRealTrack();
+    bool opened = false;
+
+    if(ResumePosition >= 0 &&
+       ResumeTrack == realTrack)
+    {
+        opened =
+            Decoder_OpenAt(
+                realTrack,
+                ResumePosition);
+        ResumePosition = -1;
+        ResumeTrack = 0;
+    }
+    if(!opened)
+        opened = Decoder_Open(realTrack);
+
+    if(!opened)
+        goto error_exit;
 
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
     CdcPlay();
@@ -166,7 +187,7 @@ static void PlayerTask(void *arg)
         if(playerStopRequested)
         {
             playerStopRequested = false;
-            goto exit;
+            goto normal_exit;
         }
         if(playerTrackChangeRequested)
         {
@@ -179,7 +200,7 @@ static void PlayerTask(void *arg)
             CdcProtocol_SendPlayReadyPacket(CurrentTrack);
             CdcProtocol_SendStatusPlayReady();
             if(!Decoder_Open(Player_GetRealTrack()))
-                goto exit;
+                goto error_exit;
             if(requestedHeadTrack != CurrentTrack)
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
             CdcPlay();
@@ -213,9 +234,8 @@ static void PlayerTask(void *arg)
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
                 if(!Decoder_Open(Player_GetRealTrack()))
-                    goto exit;
-                CdcProtocol_SendPlayStartPacket(
-                    CurrentTrack);
+                    goto error_exit;
+                CdcProtocol_SendPlayStartPacket(CurrentTrack);
                 CdcPlay();
                 break;
             }
@@ -241,7 +261,7 @@ static void PlayerTask(void *arg)
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
                 if(!Decoder_Open(Player_GetRealTrack()))
-                    goto exit;
+                    goto error_exit;
                 CdcProtocol_SendPlayStartPacket(
                     CurrentTrack);
                 CdcPlay();
@@ -250,12 +270,20 @@ static void PlayerTask(void *arg)
         }
     }
 
-exit:
+normal_exit:
+    ResumePosition = Decoder_GetPosition();
+    ResumeTrack = Player_GetRealTrack();
+    goto common_exit;
+error_exit:
+    ResumePosition = -1;
+    ResumeTrack = 0;
+    PlayedSeconds = 0;
+    PlayedSamples = 0;
+    goto common_exit;
+common_exit:
     CdcStopPlay();
     Decoder_Close();
     Output_Stop();
-    PlayedSeconds = 0;
-    PlayedSamples = 0;
     playerTaskHandle = NULL;
     playerStopRequested = false;
     playerTrackChangeRequested = false;

@@ -315,6 +315,90 @@ void Decoder_Close(void)
     memset(&g_FrameInfo, 0, sizeof(g_FrameInfo));
     memset(g_InputBuffer, 0, sizeof(g_InputBuffer));
     memset(g_PcmBuffer, 0, sizeof(g_PcmBuffer));
+}
+long Decoder_GetPosition(void)
+{
+    if(g_File == NULL)
+        return -1;
 
-    ESP_LOGI(TAG, "Playback closed");
+    long filePosition = ftell(g_File);
+
+    if(filePosition < 0)
+        return -1;
+
+    long position =
+        filePosition - (long)g_BytesLeft;
+
+    if(position < 0)
+        position = 0;
+
+    return position;
+}
+bool Decoder_OpenAt(
+    uint16_t trackNumber,
+    long position)
+{
+    MediaTrack *track =
+        MediaLibrary_GetTrack(trackNumber);
+
+    if(track == NULL)
+        return false;
+
+    g_Decoder = MP3InitDecoder();
+
+    if(g_Decoder == NULL)
+        return false;
+
+    g_File = fopen(track->Path, "rb");
+
+    if(g_File == NULL)
+    {
+        MP3FreeDecoder(g_Decoder);
+        g_Decoder = NULL;
+
+        return false;
+    }
+
+    if(fseek(g_File, position, SEEK_SET) != 0)
+    {
+        Decoder_Close();
+        return false;
+    }
+
+    size_t bytesRead =
+        fread(
+            g_InputBuffer,
+            1,
+            sizeof(g_InputBuffer),
+            g_File);
+
+    if(bytesRead == 0)
+    {
+        Decoder_Close();
+        return false;
+    }
+
+    g_ReadPtr = g_InputBuffer;
+    g_BytesLeft = bytesRead;
+
+    int syncOffset =
+        MP3FindSyncWord(
+            g_InputBuffer,
+            g_BytesLeft);
+
+    if(syncOffset < 0)
+    {
+        Decoder_Close();
+        return false;
+    }
+
+    g_ReadPtr += syncOffset;
+    g_BytesLeft -= syncOffset;
+
+    memset(
+        &g_FrameInfo,
+        0,
+        sizeof(g_FrameInfo));
+
+    return true;
 }
