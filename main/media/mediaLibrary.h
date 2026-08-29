@@ -3,7 +3,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define MEDIA_LIBRARY_MAX_TRACKS 500
+#define MEDIA_LIBRARY_MAX_TRACKS 600
 
 typedef enum
 {
@@ -27,3 +27,4 @@ void MediaLibrary_Clear(void);
 uint16_t MediaLibrary_GetCount(void);
 MediaTrack *MediaLibrary_GetTrack(uint16_t number);
 bool MediaLibrary_IsEmpty(void);
+uint16_t MediaLibrary_GetVirtualCount(void);

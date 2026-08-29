@@ -5,6 +5,7 @@
 #include "esp_log.h"
 
 #include <mediaLibrary.h>
+#include <media/mediaPlayer.h>
 
 static MediaTrack g_Tracks[MEDIA_LIBRARY_MAX_TRACKS];
 static uint16_t g_TrackCount = 0;
@@ -57,6 +58,12 @@ void MediaLibrary_Clear(void){
 
 uint16_t MediaLibrary_GetCount(void){
     return g_TrackCount;
+}
+uint16_t MediaLibrary_GetVirtualCount(void){
+    if(g_TrackCount >= TRACKS_PER_PAGE)
+        return SWITCH_TRACK_NUMBER;
+    else 
+        return g_TrackCount;
 }
 
 MediaTrack *MediaLibrary_GetTrack(uint16_t number){

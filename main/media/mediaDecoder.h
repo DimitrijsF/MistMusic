@@ -13,6 +13,8 @@ typedef enum
 
 bool Decoder_Open(uint16_t trackNumber);
 void Decoder_Close(void);
+long Decoder_GetPosition(void);
+bool Decoder_OpenAt(uint16_t trackNumber, long position);
 
 DecoderResult MediaDecoder_Step(void);
 
