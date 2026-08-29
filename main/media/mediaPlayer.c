@@ -84,6 +84,12 @@ static void Player_CalcTrackSwitch(void)
 }
 void Player_SwitchTrack(uint8_t track)
 {
+    ESP_LOGI(
+        TAG,
+        "Switch request: head=%u, current=%u:%u",
+        track,
+        CurrentPage,
+        CurrentTrack);
     requestedHeadTrack = track;
     requestedPage = CurrentPage;
 
@@ -105,6 +111,12 @@ void Player_SwitchTrack(uint8_t track)
         else
             requestedTrack = track;
     }
+     ESP_LOGI(
+        TAG,
+        "Switch target: page=%u track=%u head=%u",
+        requestedPage,
+        requestedTrack,
+        requestedHeadTrack);
     PlayedSeconds = 0;
     PlayedSamples = 0;
     playerTrackChangeRequested = true;
@@ -170,6 +182,14 @@ static void PlayerTask(void *arg)
         }
         if(playerTrackChangeRequested)
         {
+            ESP_LOGI(
+    TAG,
+    "Applying switch: current=%u:%u -> requested=%u:%u, head=%u",
+    CurrentPage,
+    CurrentTrack,
+    requestedPage,
+    requestedTrack,
+    requestedHeadTrack);
             playerTrackChangeRequested = false;
             Decoder_Close();
             CdcProtocol_SendStatusTocReady();
