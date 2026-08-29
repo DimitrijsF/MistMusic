@@ -3,8 +3,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define TRACKS_PER_PAGE 125
-#define SWITCH_TRACK_NUMBER 126
+#define TRACKS_PER_PAGE 99
+#define SWITCH_TRACK_NUMBER 100
 
 typedef struct
 {

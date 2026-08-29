@@ -61,7 +61,7 @@ uint16_t MediaLibrary_GetCount(void){
 }
 uint16_t MediaLibrary_GetVirtualCount(void){
     if(g_TrackCount >= TRACKS_PER_PAGE)
-        return 128;
+        return SWITCH_TRACK_NUMBER;
     else 
         return g_TrackCount;
 }
