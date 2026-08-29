@@ -332,3 +332,11 @@ void Player_UpdateTime(uint16_t samples, uint32_t sampleRate){
     
     CdcProtocol_SendPlayStatus(status);
 }
+void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
+    CurrentPage = page;
+    CurrentTrack = track;
+}
+void Player_SaveCurrentTrackPage(void){
+    MediaLibrary_SetSavedPage(CurrentPage);
+    MediaLibrary_SetSavedTrack(CurrentTrack);
+}

@@ -10,14 +10,29 @@
 static MediaTrack g_Tracks[MEDIA_LIBRARY_MAX_TRACKS];
 static uint16_t g_TrackCount = 0;
 static bool IsEmpty = true;
+static uint8_t SavedTrack = 0;
+static uint8_t SavedPage = 0;
 
 static const char* TAG = "MEDIA_LIBRARY";
 
-void MediaLibrary_Print(void)
+static uint32_t MediaLibrary_GetFingerprint(void);
+static uint32_t Fingerprint = 0;
+
+void MediaLibrary_Finish(void)
 {
     ESP_LOGI(TAG,
              "Tracks: %u",
              g_TrackCount);
+    uint32_t currentPrint = MediaLibrary_GetFingerprint();
+    if(Fingerprint != 0)
+    {
+        if(currentPrint != Fingerprint)
+        {
+            SavedTrack = 0;
+            SavedPage = 0;         
+        }
+    }
+    Fingerprint = currentPrint;
 }
 
 bool Media_IsSupportedFile(const char *path)
@@ -75,4 +90,65 @@ MediaTrack *MediaLibrary_GetTrack(uint16_t number){
 }
 bool MediaLibrary_IsEmpty(void){
     return IsEmpty;
+}
+static uint32_t MediaLibrary_UpdateCrc32(
+    uint32_t crc,
+    const uint8_t *data,
+    size_t length)
+{
+    for(size_t i = 0; i < length; i++)
+    {
+        crc ^= data[i];
+
+        for(uint8_t bit = 0; bit < 8; bit++)
+        {
+            if(crc & 1)
+                crc = (crc >> 1) ^ 0xEDB88320;
+            else
+                crc >>= 1;
+        }
+    }
+
+    return crc;
+}
+static uint32_t MediaLibrary_GetFingerprint(void)
+{
+    uint32_t crc = 0xFFFFFFFF;
+
+    for(uint16_t i = 0; i < g_TrackCount; i++)
+    {
+        MediaTrack *track =
+            &g_Tracks[i];
+
+        crc = MediaLibrary_UpdateCrc32(
+            crc,
+            (const uint8_t *)&track->Source,
+            sizeof(track->Source));
+
+        crc = MediaLibrary_UpdateCrc32(
+            crc,
+            (const uint8_t *)track->Path,
+            strlen(track->Path));
+
+        const uint8_t separator = 0;
+
+        crc = MediaLibrary_UpdateCrc32(
+            crc,
+            &separator,
+            sizeof(separator));
+    }
+
+    return crc ^ 0xFFFFFFFF;
+}
+void MediaLibrary_SetSavedTrack(uint8_t track){
+    SavedTrack = track;
+}
+uint8_t MediaLibrary_GetSavedTrack(void){
+    return SavedTrack;
+}
+void MediaLibrary_SetSavedPage(uint8_t page){
+    SavedPage = page;
+}
+uint8_t MediaLibrary_GetSavedPage(void){
+    return SavedPage;
 }

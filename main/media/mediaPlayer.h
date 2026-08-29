@@ -20,3 +20,5 @@ void Player_Reset(void);
 void Player_FF(bool enable);
 void Player_Rew(bool enable);
 void Player_UpdateTime(uint16_t samples, uint32_t sampleRate);
+void Player_SetCurrentTrackPage(uint8_t track, uint8_t page);
+void Player_SaveCurrentTrackPage(void);

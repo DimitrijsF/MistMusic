@@ -20,7 +20,7 @@ typedef struct
     uint8_t Channels;
 } MediaTrack;
 
-void MediaLibrary_Print(void);
+void MediaLibrary_Finish(void);
 bool Media_IsSupportedFile(const char *path);
 void MediaLibrary_AddTrack(MediaSource source, const char *path);
 void MediaLibrary_Clear(void);
@@ -28,3 +28,7 @@ uint16_t MediaLibrary_GetCount(void);
 MediaTrack *MediaLibrary_GetTrack(uint16_t number);
 bool MediaLibrary_IsEmpty(void);
 uint16_t MediaLibrary_GetVirtualCount(void);
+void MediaLibrary_SetSavedTrack(uint8_t track);
+uint8_t MediaLibrary_GetSavedTrack(void);
+void MediaLibrary_SetSavedPage(uint8_t page);
+uint8_t MediaLibrary_GetSavedPage(void);

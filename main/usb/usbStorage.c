@@ -164,7 +164,7 @@ static esp_err_t UsbStorage_ReadFS(void){
     ESP_LOGI(TAG,
          "Filesystem mounted at /usb");
     UsbStorage_ScanDirectory("/usb");
-    MediaLibrary_Print();
+    MediaLibrary_Finish();
     return ESP_OK;
 }
 

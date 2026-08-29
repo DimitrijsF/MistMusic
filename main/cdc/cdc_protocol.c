@@ -22,6 +22,7 @@ static EjectingState ejectingState = STEP0;
 static void SetLoadingState(LoadingState state);
 static void SetEjectingState(EjectingState state);
 static void SendDiskInfo(void);
+static void CheckSavedTrack(void);
 
 static void HandleStatus(const uint8_t *packet);
 static void Handle5101(const uint8_t *packet);
@@ -174,6 +175,7 @@ void HandlePlayModeRequest(const uint8_t *packet){
                 CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
                 SetLoadingState(READY);
                 SetEjectingState(INIT);
+                CheckSavedTrack();
                 CdcStopPlay();
             break;
             case READY:
@@ -219,6 +221,7 @@ void HandleLoadingState(const uint8_t *packet){
 }
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
+    Player_SaveCurrentTrackPage();
     Player_Stop();
     CdcStopPlay();
     CdcEjectStart();
@@ -247,7 +250,7 @@ static const char *LoadingStateToString(LoadingState state)
     switch (state)
     {
         case STEP0: return "STEP0";
-        case STEP1:    return "STEP1";
+        case STEP1: return "STEP1";
         case STEP2: return "STEP2";
         case READY: return "READY";
         default: return "UNKNOWN";
@@ -430,4 +433,10 @@ void CdcProtocol_SendStatusTocReady(void){
 }
 void CdcProtocol_SendStatusPlayReady(void){
     CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
+}
+static void CheckSavedTrack(void){
+    uint8_t track = MediaLibrary_GetSavedTrack();
+    if(track == 0)
+        return;
+    Player_SetCurrentTrackPage(track, MediaLibrary_GetSavedPage());
 }
