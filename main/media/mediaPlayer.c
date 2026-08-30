@@ -20,6 +20,7 @@ static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
+static bool StateSaved = false;
 
 static volatile bool playerStopRequested = false;
 static volatile bool playerTrackChangeRequested = false;
@@ -217,10 +218,7 @@ static void PlayerTask(void *arg)
                 uint8_t nextTrack;
                 uint8_t headTrack;
                 Decoder_Close();
-                Player_CalcNextTrack(
-                    &nextPage,
-                    &nextTrack,
-                    &headTrack);
+                Player_CalcNextTrack(&nextPage, &nextTrack, &headTrack);
                 if(headTrack == SWITCH_TRACK_NUMBER)
                 {
                     CdcProtocol_SendPlayStartPacket(
@@ -261,8 +259,7 @@ static void PlayerTask(void *arg)
                 PlayedSamples = 0;
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
-                CdcProtocol_SendPlayStartPacket(
-                    CurrentTrack);
+                CdcProtocol_SendPlayStartPacket(CurrentTrack);
                 CdcPlay();
                 continue;
             }
@@ -336,6 +333,14 @@ void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
     CurrentTrack = track;
 }
 void Player_SaveCurrentTrackPage(void){
-    MediaLibrary_SetSavedPage(CurrentPage);
-    MediaLibrary_SetSavedTrack(CurrentTrack);
+    if(!StateSaved)
+    {
+        ESP_LOGI(TAG, "Saving current track: %u, page: %u", CurrentTrack, CurrentPage);
+        MediaLibrary_SetSavedPage(CurrentPage);
+        MediaLibrary_SetSavedTrack(CurrentTrack);
+        StateSaved = true;
+    }
+}
+void Player_ResetSavedState(void){
+    StateSaved = false;
 }

@@ -223,6 +223,7 @@ static void UsbStorageTask(void *arg){
         if (g_DeviceConnected && !g_DeviceInstalled)
         {
             g_DeviceInstalled = true;
+            Player_ResetSavedState();   
             MediaLibrary_Clear();
             UsbStorage_OpenDevice();
             if (GetCdcState() != STANDBY)
