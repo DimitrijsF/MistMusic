@@ -13,6 +13,12 @@ typedef struct
     uint8_t Track;
 } PlayStatus;
 
+typedef enum{
+    NORMAL,
+    FF,
+    REW
+} PlayState;
+
 void Player_SwitchTrack(uint8_t track);
 void Player_Play(void);
 void Player_Stop(void);

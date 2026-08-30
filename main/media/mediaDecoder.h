@@ -20,3 +20,5 @@ DecoderResult MediaDecoder_Step(void);
 
 const MP3FrameInfo *Decoder_GetFrameInfo(void);
 const short *Decoder_GetPcmBuffer(void);
+
+long Decoder_GetTrackSize(uint16_t trackNumber);

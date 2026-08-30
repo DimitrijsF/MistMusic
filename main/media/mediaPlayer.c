@@ -16,6 +16,12 @@
 #include <media/mediaOutput.h>
 #include <mediaDecoder.h>
 
+#define SEEK_UPDATE_INTERVAL_MS 200
+#define SEEK_SLOW_BYTES 32000
+#define SEEK_FAST_BYTES 160000
+#define SEEK_SLOW_SECONDS 1
+#define SEEK_FAST_SECONDS 5
+
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
@@ -28,6 +34,15 @@ static volatile uint8_t requestedTrack = 0;
 static volatile uint8_t requestedHeadTrack = 0;
 static long ResumePosition = -1;
 static uint16_t ResumeTrack = 0;
+
+static volatile PlayState playerState = NORMAL;
+static volatile bool fastSeek = false;
+static volatile bool seekApplyRequested = false;
+
+static long SeekPosition = 0;
+static long SeekFileSize = 0;
+
+static int64_t lastSeekUpdate = 0;
 
 static const char* TAG = "MEDIA_PLAYER";
 
@@ -136,12 +151,139 @@ static bool Player_CalcNextTrack(
 
     return true;
 }
+static void Player_SendSeekStatus(void)
+{
+    uint32_t minutes = PlayedSeconds / 60;
+    uint32_t seconds = PlayedSeconds % 60;
+    PlayStatus status =
+    {
+        .Minutes = minutes,
+        .Seconds = seconds,
+        .Track = CurrentTrack
+    };
+    CdcProtocol_SendPlayStatus(status);
+}
+static void Player_ProcessSeek(void)
+{
+    int64_t now = esp_timer_get_time() / 1000;
 
-void Player_Play(void){
-    if(playerTaskHandle != NULL)
+    if(now - lastSeekUpdate <  SEEK_UPDATE_INTERVAL_MS)
+    {
+        vTaskDelay(pdMS_TO_TICKS(10));
         return;
+    }
+
+    lastSeekUpdate = now;
+
+    long bytes =
+        fastSeek
+            ? SEEK_FAST_BYTES
+            : SEEK_SLOW_BYTES;
+
+    uint32_t secondsStep =
+        fastSeek
+            ? SEEK_FAST_SECONDS
+            : SEEK_SLOW_SECONDS;
+
+    if(playerState == FF)
+    {
+        SeekPosition += bytes;
+        PlayedSeconds += secondsStep;
+        if(SeekPosition >= SeekFileSize)
+        {
+            uint8_t nextPage;
+            uint8_t nextTrack;
+            uint8_t headTrack;
+
+            Player_CalcNextTrack(
+                &nextPage,
+                &nextTrack,
+                &headTrack);
+
+            CurrentPage = nextPage;
+            CurrentTrack = nextTrack;
+
+            PlayedSeconds = 0;
+            PlayedSamples = 0;
+
+            SeekPosition = 0;
+
+            SeekFileSize = Decoder_GetTrackSize(Player_GetRealTrack());
+
+            if(SeekFileSize <= 0)
+            {
+                ESP_LOGE(
+                    TAG,
+                    "Cannot get next track size");
+
+                playerState = PLAY;
+                seekApplyRequested = true;
+
+                return;
+            }
+            CdcProtocol_SendPlayStartPacket(CurrentTrack);
+        }
+    }
+    else if(playerState == REW)
+    {
+        if(SeekPosition > bytes)
+        {
+            SeekPosition -= bytes;
+            if(PlayedSeconds > secondsStep)
+                PlayedSeconds -= secondsStep;
+            else
+                PlayedSeconds = 0;
+        }
+        else
+        {
+            uint16_t realTrack = Player_GetRealTrack();
+
+            if(realTrack <= 1)
+            {
+                SeekPosition = 0;
+                PlayedSeconds = 0;
+            }
+            else
+            {
+                realTrack--;
+                CurrentPage = (realTrack - 1) / TRACKS_PER_PAGE;
+                CurrentTrack = ((realTrack - 1) % TRACKS_PER_PAGE) + 1;
+                SeekFileSize = Decoder_GetTrackSize( realTrack);
+                if(SeekFileSize <= 0)
+                {
+                    SeekPosition = 0;
+                    PlayedSeconds = 0;
+                }
+                else
+                {
+                    SeekPosition = SeekFileSize;
+                    PlayedSeconds = 0;
+                    PlayedSamples = 0;
+                }
+
+                CdcProtocol_SendPlayStartPacket( CurrentTrack);
+            }
+        }
+    }
+    Player_SendSeekStatus();
+}
+void Player_Play(void)
+{
+    if(playerTaskHandle != NULL)
+    {
+        if(playerState != NORMAL)
+        {
+            seekApplyRequested = true;
+            playerState = NORMAL;
+        }
+
+        return;
+    }
+
     playerStopRequested = false;
     playerTrackChangeRequested = false;
+    playerState = NORMAL;
+
     BaseType_t result =
         xTaskCreate(
             PlayerTask,
@@ -178,6 +320,9 @@ static void PlayerTask(void *arg)
     if(!opened)
         goto error_exit;
 
+    SeekPosition = Decoder_GetPosition();
+    SeekFileSize = Decoder_GetTrackSize(Player_GetRealTrack());
+
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
     CdcPlay();
 
@@ -188,21 +333,52 @@ static void PlayerTask(void *arg)
             playerStopRequested = false;
             goto normal_exit;
         }
+
         if(playerTrackChangeRequested)
         {
             playerTrackChangeRequested = false;
+
+            playerState = NORMAL;
+            seekApplyRequested = false;
+
             Decoder_Close();
+
             CdcProtocol_SendStatusTocReady();
             CdcProtocol_SendPlayReadyPacket(requestedHeadTrack);
+
             CurrentPage = requestedPage;
             CurrentTrack = requestedTrack;
+
             CdcProtocol_SendPlayReadyPacket(CurrentTrack);
+
             CdcProtocol_SendStatusPlayReady();
+
+            PlayedSeconds = 0;
+            PlayedSamples = 0;
+
             if(!Decoder_Open(Player_GetRealTrack()))
                 goto error_exit;
+
             if(requestedHeadTrack != CurrentTrack)
-                CdcProtocol_SendPlayStartPacket(CurrentTrack);
+                CdcProtocol_SendPlayStartPacket( CurrentTrack);
             CdcPlay();
+            continue;
+        }
+
+        if(seekApplyRequested)
+        {
+            seekApplyRequested = false;
+            Decoder_Close();
+            if(!Decoder_OpenAt( Player_GetRealTrack(), SeekPosition))
+                goto error_exit;
+            PlayedSamples = 0;
+            playerState = PLAY;
+            CdcPlay();
+            continue;
+        }
+        if(playerState == FF || playerState == REW)
+        {
+            Player_ProcessSeek();
             continue;
         }
 
@@ -216,54 +392,88 @@ static void PlayerTask(void *arg)
                 uint8_t nextPage;
                 uint8_t nextTrack;
                 uint8_t headTrack;
+
                 Decoder_Close();
+
                 Player_CalcNextTrack(
                     &nextPage,
                     &nextTrack,
                     &headTrack);
-                if(headTrack == SWITCH_TRACK_NUMBER)
+
+                if(headTrack ==
+                SWITCH_TRACK_NUMBER)
                 {
                     CdcProtocol_SendPlayStartPacket(
                         headTrack);
 
-                    vTaskDelay(pdMS_TO_TICKS(100));
+                    vTaskDelay(
+                        pdMS_TO_TICKS(100));
                 }
+
                 CurrentPage = nextPage;
                 CurrentTrack = nextTrack;
+
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
-                if(!Decoder_Open(Player_GetRealTrack()))
+
+                if(!Decoder_Open(
+                    Player_GetRealTrack()))
+                {
                     goto error_exit;
-                CdcProtocol_SendPlayStartPacket(CurrentTrack);
+                }
+
+                CdcProtocol_SendPlayStartPacket(
+                    CurrentTrack);
+
                 CdcPlay();
+
                 break;
             }
+
             case DECODER_ERROR:
             {
-                ESP_LOGE(TAG, "Playback error");
+                ESP_LOGE(
+                    TAG,
+                    "Playback error");
+
                 uint8_t nextPage;
                 uint8_t nextTrack;
                 uint8_t headTrack;
+
                 Decoder_Close();
+
                 Player_CalcNextTrack(
                     &nextPage,
                     &nextTrack,
                     &headTrack);
-                if(headTrack == SWITCH_TRACK_NUMBER)
+
+                if(headTrack ==
+                SWITCH_TRACK_NUMBER)
                 {
                     CdcProtocol_SendPlayStartPacket(
                         headTrack);
-                    vTaskDelay(pdMS_TO_TICKS(100));
+
+                    vTaskDelay(
+                        pdMS_TO_TICKS(100));
                 }
+
                 CurrentPage = nextPage;
                 CurrentTrack = nextTrack;
+
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
-                if(!Decoder_Open(Player_GetRealTrack()))
+
+                if(!Decoder_Open(
+                    Player_GetRealTrack()))
+                {
                     goto error_exit;
+                }
+
                 CdcProtocol_SendPlayStartPacket(
                     CurrentTrack);
+
                 CdcPlay();
+
                 continue;
             }
         }
@@ -299,12 +509,47 @@ void Player_Reset(void){
     PlayedSeconds = 0;
     PlayedSamples = 0;
 }
-void Player_FF(bool enable){
+void Player_FF(bool fast)
+{
+    if(playerTaskHandle == NULL)
+        return;
 
+    if(playerState == NORMAL)
+    {
+        SeekPosition =
+            Decoder_GetPosition();
+
+        SeekFileSize = Decoder_GetTrackSize(Player_GetRealTrack());
+
+        if(SeekPosition < 0 || SeekFileSize <= 0)
+            return;
+
+        Output_Stop();
+        playerState = FF;
+        lastSeekUpdate =
+            esp_timer_get_time() / 1000;
+    }
+
+    fastSeek = fast;
 }
 
-void Player_Rew(bool enable){
+void Player_Rew(bool fast)
+{
+    if(playerTaskHandle == NULL)
+        return;
 
+    if(playerState == NORMAL)
+    {
+        SeekPosition = Decoder_GetPosition();
+        SeekFileSize = Decoder_GetTrackSize( Player_GetRealTrack());
+        if(SeekPosition < 0 || SeekFileSize <= 0)
+            return;
+        Output_Stop();
+        playerState = REW;
+        lastSeekUpdate = esp_timer_get_time() / 1000;
+    }
+
+    fastSeek = fast;
 }
 
 void Player_UpdateTime(uint16_t samples, uint32_t sampleRate){

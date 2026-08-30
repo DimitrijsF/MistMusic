@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
+#include <sys/stat.h>
 
 #include <media/mediaPlayer.h>
 #include <media/mediaLibrary.h>
@@ -401,4 +402,18 @@ bool Decoder_OpenAt(
         sizeof(g_FrameInfo));
 
     return true;
+}
+long Decoder_GetTrackSize(uint16_t trackNumber)
+{
+    MediaTrack *track = MediaLibrary_GetTrack(trackNumber);
+
+    if(track == NULL)
+        return -1;
+
+    struct stat st;
+
+    if(stat(track->Path, &st) != 0)
+        return -1;
+
+    return (long)st.st_size;
 }
