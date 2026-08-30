@@ -176,11 +176,26 @@ void HandlePlayModeRequest(const uint8_t *packet){
             default:
             break;
         }
+        return;
     }   
     if(state == STOP)
+    {
         CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay)); 
+        return;
+    }
     if(state == NO_DISK)
+    {
         CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk)); 
+        return;
+    }
+    PlayState play = Player_GetPlayState();
+    if(play == FF || play == REW){
+        Player_Stop();
+        CdcStopPlay();
+        Player_SetNormal();
+        CdcProtocol_SendStatusTocReady();
+        CdcProtocol_ProtoStatusReadyToPlay();
+    }
 }
 void CdcProtocol_CompleteLoad(void){
     SendDiskInfo();
@@ -211,14 +226,18 @@ void HandleStatus(const uint8_t *packet)
 }
 void HandleLoadingState(const uint8_t *packet){
     (void)packet;
-    if(GetCdcState() == LOADING){
+    CdcState cdc = GetCdcState();
+    PlayState player = Player_GetPlayState();
+    if(cdc == LOADING){
         if(loadingState != READY)
             CdcUart_Send(ProtoPlayAnswerLoad, sizeof(ProtoPlayAnswerLoad));
         else
             CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
     }
-    else if(GetCdcState() == STOP)
+    else if(cdc == STOP)
         CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
+    else if(player == FF || player == REW)
+        Player_SendSeekStatus();
 }
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;

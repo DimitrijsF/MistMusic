@@ -16,7 +16,7 @@
 #include <media/mediaOutput.h>
 #include <mediaDecoder.h>
 
-#define SEEK_UPDATE_INTERVAL_MS 200
+#define SEEK_UPDATE_INTERVAL_MS 100
 #define SEEK_SLOW_BYTES 32000
 #define SEEK_FAST_BYTES 160000
 #define SEEK_SLOW_SECONDS 1
@@ -28,6 +28,7 @@ static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
 
+static bool stopFromSeek = false;
 static volatile bool playerStopRequested = false;
 static volatile bool playerTrackChangeRequested = false;
 static volatile uint8_t requestedPage = 0;
@@ -152,7 +153,7 @@ static bool Player_CalcNextTrack(
 
     return true;
 }
-static void Player_SendSeekStatus(void)
+void Player_SendSeekStatus(void)
 {
     uint32_t minutes = PlayedSeconds / 60;
     uint32_t seconds = PlayedSeconds % 60;
@@ -176,15 +177,9 @@ static void Player_ProcessSeek(void)
 
     lastSeekUpdate = now;
 
-    long bytes =
-        fastSeek
-            ? SEEK_FAST_BYTES
-            : SEEK_SLOW_BYTES;
+    long bytes = fastSeek ? SEEK_FAST_BYTES : SEEK_SLOW_BYTES;
 
-    uint32_t secondsStep =
-        fastSeek
-            ? SEEK_FAST_SECONDS
-            : SEEK_SLOW_SECONDS;
+    uint32_t secondsStep = fastSeek ? SEEK_FAST_SECONDS : SEEK_SLOW_SECONDS;
 
     if(playerState == FF)
     {
@@ -277,10 +272,8 @@ void Player_Play(void)
             seekApplyRequested = true;
             playerState = NORMAL;
         }
-
         return;
     }
-
     playerStopRequested = false;
     playerTrackChangeRequested = false;
     playerState = NORMAL;
@@ -338,12 +331,9 @@ static void PlayerTask(void *arg)
         if(playerTrackChangeRequested)
         {
             playerTrackChangeRequested = false;
-
             playerState = NORMAL;
             seekApplyRequested = false;
-
             Decoder_Close();
-
             CdcProtocol_SendStatusTocReady();
             CdcProtocol_SendPlayReadyPacket(requestedHeadTrack);
 
@@ -370,7 +360,7 @@ static void PlayerTask(void *arg)
         {
             seekApplyRequested = false;
             Decoder_Close();
-            if(!Decoder_OpenAt( Player_GetRealTrack(), SeekPosition))
+            if(!Decoder_OpenAt(Player_GetRealTrack(), SeekPosition))
                 goto error_exit;
             PlayedSamples = 0;
             playerState = PLAY;
@@ -481,7 +471,13 @@ static void PlayerTask(void *arg)
     }
 
 normal_exit:
-    ResumePosition = Decoder_GetPosition();
+    if(stopFromSeek)
+    {
+        ResumePosition = SeekPosition;
+        stopFromSeek = false;
+    }
+    else
+        ResumePosition = Decoder_GetPosition();
     ResumeTrack = Player_GetRealTrack();
     goto common_exit;
 error_exit:
@@ -591,4 +587,11 @@ void Player_SaveCurrentTrackPage(void){
 }
 void Player_ResetSavedState(void){
     StateSaved = false;
+}
+PlayState Player_GetPlayState(void){
+    return playerState;
+}
+void Player_SetNormal(void){
+    stopFromSeek = true;
+    playerState = NORMAL;
 }

@@ -29,3 +29,6 @@ void Player_UpdateTime(uint16_t samples, uint32_t sampleRate);
 void Player_SetCurrentTrackPage(uint8_t track, uint8_t page);
 void Player_SaveCurrentTrackPage(void);
 void Player_ResetSavedState(void);
+void Player_SendSeekStatus(void);
+PlayState Player_GetPlayState(void);
+void Player_SetNormal(void);
