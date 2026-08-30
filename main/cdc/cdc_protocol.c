@@ -120,24 +120,10 @@ void HandlePlayBack(const uint8_t *packet){
     switch(packet[3])
     {
         case 0x00:
-            Player_Play();
+            if(GetCdcState() != PLAY)
+                Player_Play();
             break;
-
-        case 0x20:
-            Player_FF(false);
-            break;
-
-        case 0x60:
-            Player_FF(true);
-            break;
-
-        case 0xA0:
-            Player_Rew(false);
-            break;
-
-        case 0xE0:
-            Player_Rew(true);
-            break;
+        //other play state like ff, rew etc - ignored intentially
     }
 }
 void HandleTrackSelect(const uint8_t *packet){
@@ -181,6 +167,10 @@ void HandlePlayModeRequest(const uint8_t *packet){
         CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay)); 
     if(state == NO_DISK)
         CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk)); 
+    if(state == PLAY){
+        CdcProtocol_SendStatusTocReady();
+        CdcProtocol_SendStatusPlayReady();
+    }
 }
 void CdcProtocol_CompleteLoad(void){
     SendDiskInfo();
@@ -211,14 +201,17 @@ void HandleStatus(const uint8_t *packet)
 }
 void HandleLoadingState(const uint8_t *packet){
     (void)packet;
-    if(GetCdcState() == LOADING){
+    CdcState state = GetCdcState();
+    if(state == LOADING){
         if(loadingState != READY)
             CdcUart_Send(ProtoPlayAnswerLoad, sizeof(ProtoPlayAnswerLoad));
         else
             CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
     }
-    else if(GetCdcState() == STOP)
+    else if(state == STOP)
         CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
+    else if(state == PLAY)
+        Player_SendCurrentStatus();
 }
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
@@ -257,7 +250,7 @@ static const char *LoadingStateToString(LoadingState state)
         default: return "UNKNOWN";
     }
 }
-static const char *EjectingStateToString(LoadingState state)
+static const char *EjectingStateToString(EjectingState state)
 {
     switch (state)
     {
@@ -345,19 +338,15 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
 
     uint8_t reply[16];
 
-    if (length == 4 &&
-        packet[0] == 0x23 &&
-        packet[1] == 0x00 &&
-        packet[2] == 0x00 &&
-        packet[3] == 0x05)
+    if (length == 4 && packet[0] == 0x23)
     {
         const uint8_t reply[] =
         {
             0xE4,
             0x00,
             0x00,
-            0x05,
-            0x23
+            packet[3],
+            packet[0]
         };
 
         CdcUart_Send(reply, sizeof(reply));

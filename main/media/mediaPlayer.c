@@ -20,6 +20,8 @@ static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
+static uint32_t TimeBaseSeconds = 0;
+static uint32_t ResumeSeconds = 0;
 static bool StateSaved = false;
 
 static volatile bool playerStopRequested = false;
@@ -163,19 +165,26 @@ static void PlayerTask(void *arg)
     uint16_t realTrack = Player_GetRealTrack();
     bool opened = false;
 
-    if(ResumePosition >= 0 &&
-       ResumeTrack == realTrack)
+    if(ResumePosition >= 0 && ResumeTrack == realTrack)
     {
-        opened =
-            Decoder_OpenAt(
-                realTrack,
-                ResumePosition);
+        opened = Decoder_OpenAt(realTrack, ResumePosition);
+        if(opened)
+        {
+            PlayedSeconds = ResumeSeconds;
+            PlayedSamples = 0;
+            TimeBaseSeconds = ResumeSeconds;
+        }
         ResumePosition = -1;
         ResumeTrack = 0;
+        ResumeSeconds = 0;
     }
     if(!opened)
         opened = Decoder_Open(realTrack);
-
+    if(opened && PlayedSeconds == 0)
+    {
+        PlayedSamples = 0;
+        TimeBaseSeconds = 0;
+    }
     if(!opened)
         goto error_exit;
 
@@ -199,6 +208,9 @@ static void PlayerTask(void *arg)
             CurrentTrack = requestedTrack;
             CdcProtocol_SendPlayReadyPacket(CurrentTrack);
             CdcProtocol_SendStatusPlayReady();
+            PlayedSeconds = 0;
+            PlayedSamples = 0;
+            TimeBaseSeconds = 0;
             if(!Decoder_Open(Player_GetRealTrack()))
                 goto error_exit;
             if(requestedHeadTrack != CurrentTrack)
@@ -230,6 +242,7 @@ static void PlayerTask(void *arg)
                 CurrentTrack = nextTrack;
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
+                TimeBaseSeconds = 0;
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
@@ -257,6 +270,7 @@ static void PlayerTask(void *arg)
                 CurrentTrack = nextTrack;
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
+                TimeBaseSeconds = 0;
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
@@ -265,16 +279,18 @@ static void PlayerTask(void *arg)
             }
         }
     }
-
 normal_exit:
     ResumePosition = Decoder_GetPosition();
     ResumeTrack = Player_GetRealTrack();
+    ResumeSeconds = PlayedSeconds;
     goto common_exit;
 error_exit:
     ResumePosition = -1;
     ResumeTrack = 0;
+    ResumeSeconds = 0;
     PlayedSeconds = 0;
     PlayedSamples = 0;
+    TimeBaseSeconds = 0;
     goto common_exit;
 common_exit:
     CdcStopPlay();
@@ -290,42 +306,43 @@ void Player_Stop(void){
     if(GetCdcState() != NO_DISK)
         playerStopRequested = true;
 }
-void Player_Reset(void){
+void Player_Reset(void)
+{
     CurrentPage = 0;
     CurrentTrack = 1;
     PlayedSeconds = 0;
     PlayedSamples = 0;
+    TimeBaseSeconds = 0;
+    ResumePosition = -1;
+    ResumeTrack = 0;
+    ResumeSeconds = 0;
 }
-void Player_FF(bool enable){
-
-}
-
-void Player_Rew(bool enable){
-
-}
-
-void Player_UpdateTime(uint16_t samples, uint32_t sampleRate){
+void Player_UpdateTime(uint16_t samples, uint32_t sampleRate)
+{
     if(sampleRate == 0)
         return;
-
     PlayedSamples += samples;
-    uint32_t second = PlayedSamples / sampleRate;
-
+    uint32_t second = TimeBaseSeconds + (PlayedSamples / sampleRate);
     if(second == PlayedSeconds)
         return;
-
     PlayedSeconds = second;
-
-    uint32_t Minutes = second / 60;
-    uint32_t Seconds = second % 60;
-
+    PlayStatus status =
+    {
+        .Minutes = second / 60,
+        .Seconds = second % 60,
+        .Track = CurrentTrack
+    };
+    CdcProtocol_SendPlayStatus(status);
+}
+void Player_SendCurrentStatus(void){
+    uint32_t Minutes = PlayedSeconds / 60;
+    uint32_t Seconds = PlayedSeconds % 60;
     PlayStatus status =
     {
         .Minutes = Minutes,
         .Seconds = Seconds,
         .Track = CurrentTrack
     };
-    
     CdcProtocol_SendPlayStatus(status);
 }
 void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
