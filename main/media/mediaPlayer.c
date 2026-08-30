@@ -22,6 +22,7 @@
 #define SEEK_SLOW_SECONDS 1
 #define SEEK_FAST_SECONDS 5
 
+static bool StateSaved = false;
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
@@ -581,6 +582,13 @@ void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
     CurrentTrack = track;
 }
 void Player_SaveCurrentTrackPage(void){
-    MediaLibrary_SetSavedPage(CurrentPage);
-    MediaLibrary_SetSavedTrack(CurrentTrack);
+    if(!StateSaved)
+    {
+        StateSaved = true;
+        MediaLibrary_SetSavedPage(CurrentPage);
+        MediaLibrary_SetSavedTrack(CurrentTrack);
+    }    
+}
+void Player_ResetSavedState(void){
+    StateSaved = false;
 }
