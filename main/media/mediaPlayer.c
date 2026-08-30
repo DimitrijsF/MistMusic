@@ -27,6 +27,7 @@ static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
 static uint32_t PlayedSeconds = 0;
 static uint32_t PlayedSamples = 0;
+static uint32_t TimeBaseSeconds = 0;
 
 static bool stopFromSeek = false;
 static volatile bool playerStopRequested = false;
@@ -35,6 +36,7 @@ static volatile uint8_t requestedPage = 0;
 static volatile uint8_t requestedTrack = 0;
 static volatile uint8_t requestedHeadTrack = 0;
 static long ResumePosition = -1;
+static uint32_t ResumeSeconds = 0;
 static uint16_t ResumeTrack = 0;
 
 static volatile PlayState playerState = NORMAL;
@@ -119,6 +121,7 @@ void Player_SwitchTrack(uint8_t track)
     }
     PlayedSeconds = 0;
     PlayedSamples = 0;
+    TimeBaseSeconds = 0;
     playerTrackChangeRequested = true;
 }
 static bool Player_CalcNextTrack(
@@ -201,7 +204,7 @@ static void Player_ProcessSeek(void)
 
             PlayedSeconds = 0;
             PlayedSamples = 0;
-
+            TimeBaseSeconds = 0;
             SeekPosition = 0;
 
             SeekFileSize = Decoder_GetTrackSize(Player_GetRealTrack());
@@ -228,7 +231,10 @@ static void Player_ProcessSeek(void)
             if(PlayedSeconds > secondsStep)
                 PlayedSeconds -= secondsStep;
             else
+            {
                 PlayedSeconds = 0;
+                TimeBaseSeconds = 0;
+            }
         }
         else
         {
@@ -238,6 +244,7 @@ static void Player_ProcessSeek(void)
             {
                 SeekPosition = 0;
                 PlayedSeconds = 0;
+                TimeBaseSeconds = 0;
             }
             else
             {
@@ -249,12 +256,14 @@ static void Player_ProcessSeek(void)
                 {
                     SeekPosition = 0;
                     PlayedSeconds = 0;
+                    TimeBaseSeconds = 0;
                 }
                 else
                 {
                     SeekPosition = SeekFileSize;
                     PlayedSeconds = 0;
                     PlayedSamples = 0;
+                    TimeBaseSeconds = 0;
                 }
 
                 CdcProtocol_SendPlayStartPacket( CurrentTrack);
@@ -296,20 +305,41 @@ void Player_Play(void)
 static void PlayerTask(void *arg)
 {
     uint16_t realTrack = Player_GetRealTrack();
+    ESP_LOGI(
+    TAG,
+    "PlayerTask start: realTrack=%u, ResumeTrack=%u, ResumePosition=%ld",
+    realTrack,
+    ResumeTrack,
+    ResumePosition);
     bool opened = false;
 
-    if(ResumePosition >= 0 &&
-       ResumeTrack == realTrack)
-    {
-        opened =
-            Decoder_OpenAt(
-                realTrack,
-                ResumePosition);
+    if(ResumePosition >= 0 && ResumeTrack == realTrack)
+    {   
+        ESP_LOGI(
+        TAG,
+        "Resume found: pos=%ld sec=%lu",
+        ResumePosition,
+        (unsigned long)ResumeSeconds);
+        opened = Decoder_OpenAt(realTrack, ResumePosition);
+
+        if(opened)
+        {
+            PlayedSeconds = ResumeSeconds;
+            PlayedSamples = 0;
+            TimeBaseSeconds = ResumeSeconds;
+        }
+
         ResumePosition = -1;
         ResumeTrack = 0;
+        ResumeSeconds = 0;
     }
     if(!opened)
+    {
+        PlayedSeconds = 0;
+        PlayedSamples = 0;
+    TimeBaseSeconds = 0;
         opened = Decoder_Open(realTrack);
+    }
 
     if(!opened)
         goto error_exit;
@@ -318,6 +348,10 @@ static void PlayerTask(void *arg)
     SeekFileSize = Decoder_GetTrackSize(Player_GetRealTrack());
 
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
+    ESP_LOGI(
+    TAG,
+    "Before CdcPlay: PlayedSeconds=%lu",
+    (unsigned long)PlayedSeconds);
     CdcPlay();
 
     while(GetCdcState() == PLAY)
@@ -406,7 +440,7 @@ static void PlayerTask(void *arg)
 
                 PlayedSeconds = 0;
                 PlayedSamples = 0;
-
+                TimeBaseSeconds = 0;
                 if(!Decoder_Open(
                     Player_GetRealTrack()))
                 {
@@ -423,6 +457,11 @@ static void PlayerTask(void *arg)
 
             case DECODER_ERROR:
             {
+                if(playerState == FF || playerState == REW)
+                {
+                    ESP_LOGI( TAG, "Ignoring decoder error during seek");
+                    continue;
+                }
                 ESP_LOGE(
                     TAG,
                     "Playback error");
@@ -471,20 +510,39 @@ static void PlayerTask(void *arg)
     }
 
 normal_exit:
-    if(stopFromSeek)
+{
+    bool wasSeeking = stopFromSeek;
+
+    if(wasSeeking)
     {
         ResumePosition = SeekPosition;
+        ResumeSeconds = PlayedSeconds;
         stopFromSeek = false;
     }
     else
+    {
         ResumePosition = Decoder_GetPosition();
+        ResumeSeconds = PlayedSeconds;
+    }
+
     ResumeTrack = Player_GetRealTrack();
+
+    ESP_LOGI(
+        TAG,
+        "Saving resume: stopFromSeek=%d, seek=%ld, decoder=%ld, seconds=%lu",
+        wasSeeking,
+        SeekPosition,
+        Decoder_GetPosition(),
+        (unsigned long)ResumeSeconds);
+
     goto common_exit;
+}
 error_exit:
     ResumePosition = -1;
     ResumeTrack = 0;
     PlayedSeconds = 0;
     PlayedSamples = 0;
+    TimeBaseSeconds = 0;
     goto common_exit;
 common_exit:
     CdcStopPlay();
@@ -505,6 +563,7 @@ void Player_Reset(void){
     CurrentTrack = 1;
     PlayedSeconds = 0;
     PlayedSamples = 0;
+    TimeBaseSeconds = 0;
 }
 void Player_FF(bool fast)
 {
@@ -521,7 +580,7 @@ void Player_FF(bool fast)
         if(SeekPosition < 0 || SeekFileSize <= 0)
             return;
 
-        Output_Stop();
+        Output_Silence();
         playerState = FF;
         lastSeekUpdate =
             esp_timer_get_time() / 1000;
@@ -541,7 +600,7 @@ void Player_Rew(bool fast)
         SeekFileSize = Decoder_GetTrackSize( Player_GetRealTrack());
         if(SeekPosition < 0 || SeekFileSize <= 0)
             return;
-        Output_Stop();
+        Output_Silence();
         playerState = REW;
         lastSeekUpdate = esp_timer_get_time() / 1000;
     }
@@ -549,28 +608,33 @@ void Player_Rew(bool fast)
     fastSeek = fast;
 }
 
-void Player_UpdateTime(uint16_t samples, uint32_t sampleRate){
+void Player_UpdateTime(
+    uint16_t samples,
+    uint32_t sampleRate)
+{
     if(sampleRate == 0)
         return;
 
     PlayedSamples += samples;
-    uint32_t second = PlayedSamples / sampleRate;
+
+    uint32_t elapsedSeconds =
+        PlayedSamples / sampleRate;
+
+    uint32_t second =
+        TimeBaseSeconds + elapsedSeconds;
 
     if(second == PlayedSeconds)
         return;
 
     PlayedSeconds = second;
 
-    uint32_t Minutes = second / 60;
-    uint32_t Seconds = second % 60;
-
     PlayStatus status =
     {
-        .Minutes = Minutes,
-        .Seconds = Seconds,
+        .Minutes = second / 60,
+        .Seconds = second % 60,
         .Track = CurrentTrack
     };
-    
+
     CdcProtocol_SendPlayStatus(status);
 }
 void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
@@ -592,6 +656,11 @@ PlayState Player_GetPlayState(void){
     return playerState;
 }
 void Player_SetNormal(void){
+    ESP_LOGI(
+    TAG,
+    "Seek finished: position=%ld, track=%u",
+    SeekPosition,
+    Player_GetRealTrack());
     stopFromSeek = true;
     playerState = NORMAL;
 }

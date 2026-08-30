@@ -210,7 +210,22 @@ static i2s_slot_mode_t ToSlotMode(uint8_t channels){
             return I2S_SLOT_MODE_MONO;
     }
 }
+void Output_Silence(void)
+{
+    if(!IsStarted)
+        return;
 
+    static const int16_t silence[2048] = {0};
+
+    size_t bytesWritten;
+    ESP_LOGI(TAG, "Writing silence...");
+    i2s_channel_write(
+        OutputChannel,
+        silence,
+        sizeof(silence),
+        &bytesWritten,
+        portMAX_DELAY);
+}
 bool Output_IsStarted(void){
     return IsStarted;
 }

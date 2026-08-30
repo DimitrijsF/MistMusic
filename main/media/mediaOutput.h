@@ -17,3 +17,4 @@ bool Output_Start(void);
 void Output_Stop(void);
 bool Output_Write(const int16_t *samples, size_t sampleCount);
 bool Output_IsStarted(void);
+void Output_Silence(void);

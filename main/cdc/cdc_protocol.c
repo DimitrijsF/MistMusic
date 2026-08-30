@@ -189,12 +189,12 @@ void HandlePlayModeRequest(const uint8_t *packet){
         return;
     }
     PlayState play = Player_GetPlayState();
-    if(play == FF || play == REW){
+    if(play == FF || play == REW){    
         Player_Stop();
         CdcStopPlay();
         Player_SetNormal();
         CdcProtocol_SendStatusTocReady();
-        CdcProtocol_ProtoStatusReadyToPlay();
+        CdcProtocol_SendStatusPlayReady();
     }
 }
 void CdcProtocol_CompleteLoad(void){
@@ -364,19 +364,14 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
 
     uint8_t reply[16];
 
-    if (length == 4 &&
-        packet[0] == 0x23 &&
-        packet[1] == 0x00 &&
-        packet[2] == 0x00 &&
-        packet[3] == 0x05)
-    {
+    if (length == 4 && packet[0] == 0x23){
         const uint8_t reply[] =
         {
             0xE4,
             0x00,
             0x00,
-            0x05,
-            0x23
+            packet[3],
+            packet[0],
         };
 
         CdcUart_Send(reply, sizeof(reply));
