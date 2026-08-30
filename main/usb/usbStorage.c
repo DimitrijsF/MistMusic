@@ -163,7 +163,11 @@ static esp_err_t UsbStorage_ReadFS(void){
 
     ESP_LOGI(TAG,
          "Filesystem mounted at /usb");
+    if(!MediaLibrary_Begin())
+        return ESP_FAIL;
+
     UsbStorage_ScanDirectory("/usb");
+
     MediaLibrary_Finish();
     return ESP_OK;
 }
@@ -221,12 +225,11 @@ static void UsbStorageTask(void *arg){
             g_DeviceInstalled = true;
             MediaLibrary_Clear();
             UsbStorage_OpenDevice();
+            if (GetCdcState() != STANDBY)
+                CdcLoadDisk();
             if (g_Device != NULL)
-            {
                 UsbStorage_ReadFS();
-                if (GetCdcState() != STANDBY)
-                    CdcLoadDisk();
-            }
+            CdcProtocol_CompleteLoad();
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
