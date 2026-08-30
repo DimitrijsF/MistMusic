@@ -3,8 +3,6 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define MEDIA_LIBRARY_MAX_TRACKS 600
-
 typedef enum
 {
     MEDIA_SOURCE_USB,
@@ -32,3 +30,4 @@ void MediaLibrary_SetSavedTrack(uint8_t track);
 uint8_t MediaLibrary_GetSavedTrack(void);
 void MediaLibrary_SetSavedPage(uint8_t page);
 uint8_t MediaLibrary_GetSavedPage(void);
+bool MediaLibrary_Begin(void);

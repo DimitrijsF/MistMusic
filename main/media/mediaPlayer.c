@@ -9,7 +9,6 @@
 #include "freertos/task.h"
 
 #include <cdc/cdc_state.h>
-
 #include <cdc/cdc_protocol.h>
 
 #include <media/mediaPlayer.h>

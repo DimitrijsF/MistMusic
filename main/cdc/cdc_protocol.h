@@ -44,3 +44,4 @@ void CdcProtocol_SendPlayReadyPacket(uint8_t track);
 void CdcProtocol_SendPlayStartPacket(uint8_t track);
 void CdcProtocol_SendStatusTocReady(void);
 void CdcProtocol_SendStatusPlayReady(void);
+void CdcProtocol_CompleteLoad(void);

@@ -1,37 +1,81 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "esp_log.h"
 
 #include <mediaLibrary.h>
 #include <media/mediaPlayer.h>
 
-static MediaTrack g_Tracks[MEDIA_LIBRARY_MAX_TRACKS];
+#define MEDIA_LIBRARY_INDEX_PATH "/usb/cd30_index"
+
 static uint16_t g_TrackCount = 0;
 static bool IsEmpty = true;
 static uint8_t SavedTrack = 0;
 static uint8_t SavedPage = 0;
 
 static const char* TAG = "MEDIA_LIBRARY";
+static FILE *g_IndexFile = NULL;
 
-static uint32_t MediaLibrary_GetFingerprint(void);
+static MediaTrack g_CurrentTrack;
+static uint32_t g_CurrentCrc = 0xFFFFFFFF;
 static uint32_t Fingerprint = 0;
 
+static uint32_t MediaLibrary_UpdateCrc32(uint32_t crc, const uint8_t *data, size_t length);
+
+bool MediaLibrary_Begin(void)
+{
+    g_TrackCount = 0;
+    IsEmpty = true;
+
+    g_CurrentCrc = 0xFFFFFFFF;
+
+    g_IndexFile =
+        fopen(
+            MEDIA_LIBRARY_INDEX_PATH,
+            "wb");
+
+    if(g_IndexFile == NULL)
+    {
+        ESP_LOGE(
+            TAG,
+            "Cannot create index");
+
+        return false;
+    }
+
+    return true;
+}
 void MediaLibrary_Finish(void)
 {
-    ESP_LOGI(TAG,
-             "Tracks: %u",
-             g_TrackCount);
-    uint32_t currentPrint = MediaLibrary_GetFingerprint();
+    if(g_IndexFile != NULL)
+    {
+        fclose(g_IndexFile);
+        g_IndexFile = NULL;
+    }
+
+    uint32_t currentPrint =
+        g_CurrentCrc ^ 0xFFFFFFFF;
+
+    ESP_LOGI(
+        TAG,
+        "Tracks: %u",
+        g_TrackCount);
+
     if(Fingerprint != 0)
     {
         if(currentPrint != Fingerprint)
         {
+            ESP_LOGI(
+                TAG,
+                "Library changed");
+
             SavedTrack = 0;
-            SavedPage = 0;         
+            SavedPage = 0;
         }
     }
+
     Fingerprint = currentPrint;
 }
 
@@ -45,22 +89,54 @@ bool Media_IsSupportedFile(const char *path)
     return strcasecmp(ext, ".mp3") == 0;
 }
 
-void MediaLibrary_AddTrack(MediaSource source, const char *path)
+void MediaLibrary_AddTrack(
+    MediaSource source,
+    const char *path)
 {
-    if (g_TrackCount >= MEDIA_LIBRARY_MAX_TRACKS)
+    if(g_IndexFile == NULL)
         return;
 
-    MediaTrack *track =
-        &g_Tracks[g_TrackCount];
+    MediaTrack track = {0};
 
-    track->Source = source;
+    track.Source = source;
 
     strncpy(
-        track->Path,
+        track.Path,
         path,
-        sizeof(track->Path) - 1);
+        sizeof(track.Path) - 1);
 
-    track->Path[sizeof(track->Path) - 1] = '\0';
+    g_CurrentCrc =
+        MediaLibrary_UpdateCrc32(
+            g_CurrentCrc,
+            (const uint8_t *)&track.Source,
+            sizeof(track.Source));
+
+    g_CurrentCrc =
+        MediaLibrary_UpdateCrc32(
+            g_CurrentCrc,
+            (const uint8_t *)track.Path,
+            strlen(track.Path));
+
+    const uint8_t separator = 0;
+
+    g_CurrentCrc =
+        MediaLibrary_UpdateCrc32(
+            g_CurrentCrc,
+            &separator,
+            sizeof(separator));
+
+    if(fwrite(
+        &track,
+        sizeof(MediaTrack),
+        1,
+        g_IndexFile) != 1)
+    {
+        ESP_LOGE(
+            TAG,
+            "Failed to write index");
+
+        return;
+    }
 
     g_TrackCount++;
     IsEmpty = false;
@@ -82,11 +158,52 @@ uint16_t MediaLibrary_GetVirtualCount(void){
 }
 
 MediaTrack *MediaLibrary_GetTrack(uint16_t number){
-    if(number - 1 > g_TrackCount || number - 1 < 0)
+    if(number == 0 ||
+       number > g_TrackCount)
+    {
         return NULL;
-    else{
-        return &g_Tracks[number - 1];
     }
+
+    FILE *file =
+        fopen(
+            MEDIA_LIBRARY_INDEX_PATH,
+            "rb");
+
+    if(file == NULL)
+    {
+        ESP_LOGE(
+            TAG,
+            "Cannot open index");
+
+        return NULL;
+    }
+
+    long offset =
+        (long)(number - 1) *
+        sizeof(MediaTrack);
+
+    if(fseek(
+        file,
+        offset,
+        SEEK_SET) != 0)
+    {
+        fclose(file);
+        return NULL;
+    }
+
+    if(fread(
+        &g_CurrentTrack,
+        sizeof(MediaTrack),
+        1,
+        file) != 1)
+    {
+        fclose(file);
+        return NULL;
+    }
+
+    fclose(file);
+
+    return &g_CurrentTrack;
 }
 bool MediaLibrary_IsEmpty(void){
     return IsEmpty;
@@ -108,37 +225,7 @@ static uint32_t MediaLibrary_UpdateCrc32(
                 crc >>= 1;
         }
     }
-
     return crc;
-}
-static uint32_t MediaLibrary_GetFingerprint(void)
-{
-    uint32_t crc = 0xFFFFFFFF;
-
-    for(uint16_t i = 0; i < g_TrackCount; i++)
-    {
-        MediaTrack *track =
-            &g_Tracks[i];
-
-        crc = MediaLibrary_UpdateCrc32(
-            crc,
-            (const uint8_t *)&track->Source,
-            sizeof(track->Source));
-
-        crc = MediaLibrary_UpdateCrc32(
-            crc,
-            (const uint8_t *)track->Path,
-            strlen(track->Path));
-
-        const uint8_t separator = 0;
-
-        crc = MediaLibrary_UpdateCrc32(
-            crc,
-            &separator,
-            sizeof(separator));
-    }
-
-    return crc ^ 0xFFFFFFFF;
 }
 void MediaLibrary_SetSavedTrack(uint8_t track){
     SavedTrack = track;
