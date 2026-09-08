@@ -20,3 +20,5 @@ void CdcPlay(void);
 void CdcStopPlay(void);
 void CdcEjectStart(void);
 void CdcNoDisk(void);
+void CdcSetUsbRandom(bool value);
+void CdcSetUsbPriority(bool value);

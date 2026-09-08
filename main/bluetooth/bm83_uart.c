@@ -117,11 +117,11 @@ static void BtUart_Task(void *arg)
                     "%02X ",
                     buffer[i]);
             }
-            ESP_LOGI(
+         /*   ESP_LOGI(
                 TAG,
                 "RX (%d): << %s",
                 length,
-                text);
+                text);*/
             BtProto_ProcessPacket(buffer, length);
         }
     }

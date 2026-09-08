@@ -23,6 +23,11 @@ static const BM_PACKET ProtoPowerOnRelease = {
     .Data = {0x00, 0x52},
     .DataLength = 2
 };
+static const BM_PACKET ProtoSetPairing = {
+    .Command = 0x02,
+    .Data = {0x00, 0x5D},
+    .DataLength = 2
+};
 static const BM_PACKET ProtoSetATRx = {
     .Command = 0x44,
     .Data = {0x03, 0x01},
@@ -85,8 +90,10 @@ void BtProto_ProcessPacket(const uint8_t *packet, uint8_t length){
         case 0x02: ProcessCallEvents(packet[4]); break;
     }
 }
-
 void BtProto_SendPowerOn(void){
     SendPacket(&ProtoPowerOnPress);
     SendPacket(&ProtoPowerOnRelease);
+}
+void BtProto_SendPairing(void){
+    SendPacket(&ProtoSetPairing);
 }

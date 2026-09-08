@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MistMusic</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: sans-serif;
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0 0 24px;
+            font-size: 24px;
+        }
+
+        .item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .button {
+            width: 100%;
+            padding: 14px;
+            border: 0;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .setting {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>MistMusic</h1>
+
+        <div class="item">
+            <button class="button" onclick="pair()">
+                Enable Pairing
+            </button>
+        </div>
+
+        <div class="item">
+            <div class="setting">
+                <div>
+                    Random Playback
+                </div>
+
+                <input
+                    type="checkbox"
+                    id="random"
+                    onchange="setRandom(this.checked)">
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function pair() {
+            fetch('/pair');
+        }
+
+        function setRandom(value) {
+            fetch('/random?value=' + (value ? '1' : '0'));
+        }
+    </script>
+</body>
+</html>

@@ -12,6 +12,9 @@
 #include <media/mediaPlayer.h>
 #include <usb/usbStorage.h>
 
+static bool UsbPriority = true;
+static bool UsbRandom = false;
+
 static CdcState State = STANDBY;
 static const char *TAG = "CDC_STATE";
 
@@ -73,4 +76,10 @@ void CdcEjectStart(void){
 }
 void CdcNoDisk(void){
     SetCdcState(NO_DISK);
+}
+void CdcSetUsbRandom(bool value){
+    UsbRandom = value;
+}
+void CdcSetUsbPriority(bool value){
+    UsbPriority = value;
 }

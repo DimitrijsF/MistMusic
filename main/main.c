@@ -7,9 +7,11 @@
 #include <cdc/cdc.h>
 #include <media/mediaOutput.h>
 #include <bluetooth/bm83.h>
+#include <wifi/wifiService.h>
 
 void app_main(void)
 {
+    WifiService_Init();
     cdcInit();
     UsbHost_Init();
     UsbStorage_Init();
