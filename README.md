@@ -1,9 +1,7 @@
 # MistMusic
 
 MistMusic is a firmware project that replaces the original single-disc CD drive inside a **Blaupunkt CD30 MP3** head unit with a modern digital music player.
-
 Instead of reading audio CDs, the original CD drive communication is emulated, allowing the head unit to control MP3 playback through its original interface and controls.
-
 The goal of the project is to preserve the original appearance and user experience of the factory head unit while replacing the mechanical CD playback system with modern digital audio playback.
 
 ## Features
@@ -32,17 +30,14 @@ MistMusic is currently developed and tested with:
 - **Blaupunkt CD30 MP3**
 
 The firmware communicates with the head unit using the protocol originally used by its internal CD drive.
-
 Compatibility with other head units has not been verified.
 
 ## How It Works
 
 The original CD mechanism is replaced by a microcontroller-based system.
-
 The head unit communicates with the replacement firmware as if it were communicating with its original CD drive.
 
 The firmware handles:
-
 - CD drive communication and protocol responses
 - Playback state management
 - Track and page selection
@@ -56,23 +51,17 @@ From the head unit's perspective, the replacement behaves like the original CD p
 ## Playback Model
 
 Tracks stored on the media are presented to the head unit using a virtual CD-style structure.
-
 The firmware maps real media tracks to the track and page structure expected by the original CD interface.
-
 This allows the original controls of the head unit to be used for navigation without modifying the factory user interface.
-
 When the end of a track is reached, playback automatically continues with the next available track.
-
 Track changes across virtual page boundaries are also handled automatically.
 
 ## Resume Playback
 
 MistMusic stores the current playback position when playback is stopped.
-
 When playback is started again, the firmware attempts to resume from the previously stored position.
 
 The resume information includes:
-
 - Current track
 - Playback position within the media file
 
@@ -81,9 +70,7 @@ Playback time is restored together with the playback position so that the head u
 ## Audio Playback
 
 MP3 files are decoded by the firmware and sent to the audio output used by the head unit.
-
 The audio output is configured to work with the existing hardware audio path while preserving compatibility with the original head unit.
-
 The player handles audio decoder startup and format configuration automatically when playback begins.
 
 ## Project Structure
@@ -95,7 +82,6 @@ The firmware is divided into several functional parts.
 Handles communication with the head unit and emulates the behavior of the original CD drive.
 
 Responsibilities include:
-
 - Receiving commands from the head unit
 - Sending protocol responses
 - Playback status reporting
@@ -107,7 +93,6 @@ Responsibilities include:
 Controls the overall playback process.
 
 Responsibilities include:
-
 - Starting and stopping playback
 - Opening tracks
 - Switching tracks
@@ -121,7 +106,6 @@ Responsibilities include:
 Handles MP3 decoding and media file access.
 
 Responsibilities include:
-
 - Opening media files
 - Seeking to playback positions
 - Decoding MP3 frames
@@ -133,7 +117,6 @@ Responsibilities include:
 Handles PCM audio output.
 
 Responsibilities include:
-
 - Audio format configuration
 - Starting and stopping the audio output
 - Sending decoded PCM samples to the audio hardware
@@ -141,17 +124,13 @@ Responsibilities include:
 ## Controls
 
 The project is designed to work with the original controls of the **Blaupunkt CD30 MP3** head unit.
-
 Track selection and playback control are handled through the factory CD interface.
-
 The intention is to preserve the original user experience as much as possible without adding a separate user interface for normal operation.
 
 ## Configuration
 
 MistMusic is intended to operate primarily through the original head unit controls.
-
 Additional connectivity features, such as Wi-Fi, are intended for service or configuration purposes rather than normal everyday playback.
-
 The head unit should remain the primary user interface.
 
 ## Development Status
@@ -159,7 +138,6 @@ The head unit should remain the primary user interface.
 MistMusic **v1.0** is considered a working release.
 
 The core functionality has been tested with a **Blaupunkt CD30 MP3** head unit, including:
-
 - Head unit communication
 - CD drive emulation
 - MP3 playback
