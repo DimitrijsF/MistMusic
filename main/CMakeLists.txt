@@ -15,6 +15,11 @@ idf_component_register(
         "cdc/cdc_uart.c"     
         "cdc/cdc.c"
 
+        "bluetooth/bm83.c"
+        "bluetooth/bm83_uart.c"
+        "bluetooth/bm83_protocol.c"
+        "bluetooth/bm83_state.c"
+
         "components/mp3dec.c"
         "components/mp3tabs.c"
 
@@ -38,6 +43,7 @@ idf_component_register(
         "usb"
         "media"
         "cdc"
+        "bluetooth"
         "components/pub"
         "components/real"
 )

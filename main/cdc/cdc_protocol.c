@@ -101,12 +101,10 @@ static const uint8_t ProtoPlayAnswerLoad[] = {
 static const uint8_t ProtoPlayAnswerReady[] = {
     0x15, 0x00, 0x00, 0x00, 0x01, 0x00
 };
-#pragma endregion
 static const uint8_t ProtoAnswer5101[] = {
     0x42, 0x04, 0x12
 };
 #pragma endregion
-
 #pragma region PacketProcessors
 void Handle5101(const uint8_t *packet){
     (void)packet;
