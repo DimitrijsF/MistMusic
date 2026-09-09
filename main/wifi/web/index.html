@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,89 +8,78 @@
 
     <style>
         body {
-            margin: 0;
-            padding: 24px;
             font-family: sans-serif;
-            background: #f4f4f4;
-            color: #222;
-        }
-
-        .container {
-            max-width: 420px;
-            margin: 0 auto;
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 0 20px;
         }
 
         h1 {
-            margin: 0 0 24px;
-            font-size: 24px;
+            margin-bottom: 30px;
         }
 
-        .item {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-
-        .button {
+        button {
             width: 100%;
             padding: 14px;
-            border: 0;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
+            font-size: 18px;
+            margin-bottom: 25px;
         }
 
-        .setting {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
+        label {
+            font-size: 18px;
         }
 
         input[type="checkbox"] {
-            width: 22px;
-            height: 22px;
-            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 8px;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
 
-        <h1>MistMusic</h1>
+    <h1>MistMusic</h1>
 
-        <div class="item">
-            <button class="button" onclick="pair()">
-                Enable Pairing
-            </button>
-        </div>
+    <button onclick="enablePairing()">Enable Pairing</button>
 
-        <div class="item">
-            <div class="setting">
-                <div>
-                    Random Playback
-                </div>
-
-                <input
-                    type="checkbox"
-                    id="random"
-                    onchange="setRandom(this.checked)">
-            </div>
-        </div>
-
-    </div>
+    <label>
+        <input type="checkbox" id="randomPlayback" onchange="randomChanged()">
+        Random Playback
+    </label>
 
     <script>
-        function pair() {
-            fetch('/pair');
+        function loadState() {
+            fetch('/state')
+                .then(response => response.json())
+                .then(state => {
+                    document.getElementById('randomPlayback').checked = state.random;
+                })
+                .catch(error => {
+                    console.log('Failed to load state:', error);
+                });
         }
 
-        function setRandom(value) {
-            fetch('/random?value=' + (value ? '1' : '0'));
+        function randomChanged() {
+            var enabled = document.getElementById('randomPlayback').checked;
+            var value = enabled ? 1 : 0;
+
+            fetch('/random?value=' + value)
+                .catch(error => {
+                    console.log('Failed to update random playback:', error);
+                });
         }
+
+        function enablePairing() {
+            fetch('/pair')
+                .catch(error => {
+                    console.log('Failed to enable pairing:', error);
+                });
+        }
+
+        loadState();
     </script>
+
 </body>
 </html>

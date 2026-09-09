@@ -7,6 +7,7 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_random.h"
 
 #include <cdc/cdc_state.h>
 #include <cdc/cdc_protocol.h>
@@ -90,18 +91,30 @@ void Player_SwitchTrack(uint8_t track)
     requestedHeadTrack = track;
     requestedPage = CurrentPage;
 
-    if(track == SWITCH_TRACK_NUMBER)
-        Player_CalcTrackSwitch();
+    if(CdcGetUsbRandom()){
+        if(track > CurrentTrack){
+            uint32_t randomRealTrack = (esp_random() % MediaLibrary_GetCount()) + 1;
+            requestedPage = (randomRealTrack - 1) / TRACKS_PER_PAGE;
+            requestedTrack = ((randomRealTrack - 1) % TRACKS_PER_PAGE) + 1;
+        }
+        else{
+            requestedTrack = CurrentTrack;
+        }
+    }
     else
     {
-        uint16_t requestedRealTrack = Player_GetRealTrackByPosition(CurrentPage, track);
-        if(requestedRealTrack > MediaLibrary_GetCount())
-        {
-            requestedPage = 0;
-            requestedTrack = 1;
-        }
+        if(track == SWITCH_TRACK_NUMBER)
+            Player_CalcTrackSwitch();
         else
-            requestedTrack = track;
+        {
+            uint16_t requestedRealTrack = Player_GetRealTrackByPosition(CurrentPage, track);
+            if(requestedRealTrack > MediaLibrary_GetCount()){
+                requestedPage = 0;
+                requestedTrack = 1;
+            }
+            else
+                requestedTrack = track;
+        }
     }
     PlayedSeconds = 0;
     PlayedSamples = 0;
@@ -118,6 +131,17 @@ static bool Player_CalcNextTrack(
     *nextPage = CurrentPage;
     *nextTrack = CurrentTrack;
     *headTrack = 0;
+
+    if(CdcGetUsbRandom())
+    {
+        uint16_t randomRealTrack = (esp_random() % trackCount) + 1;
+
+        *nextPage = (randomRealTrack - 1) / TRACKS_PER_PAGE;
+        *nextTrack = ((randomRealTrack - 1) % TRACKS_PER_PAGE) + 1;
+        *headTrack = *nextTrack;
+
+        return true;
+    }
     if(realTrack >= trackCount)
     {
         *nextPage = 0;
@@ -233,9 +257,7 @@ static void PlayerTask(void *arg)
                 Player_CalcNextTrack(&nextPage, &nextTrack, &headTrack);
                 if(headTrack == SWITCH_TRACK_NUMBER)
                 {
-                    CdcProtocol_SendPlayStartPacket(
-                        headTrack);
-
+                    CdcProtocol_SendPlayStartPacket(headTrack);
                     vTaskDelay(pdMS_TO_TICKS(100));
                 }
                 CurrentPage = nextPage;
