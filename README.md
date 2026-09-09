@@ -1,172 +1,271 @@
-# MistMusic
+# MistMusic — USB MP3 Player for Blaupunkt CD30 MP3
 
-MistMusic is a firmware project that replaces the original single-disc CD drive inside a **Blaupunkt CD30 MP3** head unit with a modern digital music player.
-Instead of reading audio CDs, the original CD drive communication is emulated, allowing the head unit to control MP3 playback through its original interface and controls.
-The goal of the project is to preserve the original appearance and user experience of the factory head unit while replacing the mechanical CD playback system with modern digital audio playback.
+**MistMusic replaces the original internal CD drive of a Blaupunkt CD30 MP3
+head unit with a digital MP3 player based on an ESP microcontroller.**
+
+It allows you to play MP3 music from a USB flash drive while keeping the
+original CD30 MP3 head unit, factory controls and audio path.
+
+In other words:
+
+**CD30 MP3 + MistMusic = USB MP3 playback without replacing the head unit.**
+
+## What is MistMusic?
+
+MistMusic is an open-source hardware and firmware project that replaces the
+original single-disc CD drive inside a **Blaupunkt CD30 MP3** head unit.
+
+Instead of reading audio from a physical CD, MistMusic emulates the original
+CD drive communication and provides music playback from a USB flash drive.
+
+The original head unit remains in place and continues to handle the user
+interface, display, buttons and audio system.
+
+MistMusic is designed specifically as an **internal CD drive replacement**.
+
+It is **not an external CD changer emulator**.
 
 ## Features
 
-- Replacement for the original single-disc CD drive
-- MP3 playback from USB storage
-- Control using the original head unit controls
-- Track selection through the factory CD interface
+- Replacement for the original internal CD drive
+- MP3 playback from a USB flash drive
+- Works with the original CD30 MP3 controls
+- Original head unit display and user interface
+- Track selection using the factory controls
 - Multiple virtual CD pages
 - Automatic track switching
 - Playback position tracking
-- Resume playback support
-- Restoration of the previously selected track and page
-- Native playback status reporting to the head unit
-- Audio output through the original head unit audio path
-- Support for Bluetooth audio playback
-- Wi-Fi can be used as a service/configuration feature
-
-The project does not emulate an external CD changer.  
-It emulates the original **internal single-disc CD drive mechanism** of the head unit.
+- Resume playback
+- Restoration of the previous track and virtual CD page
+- Native status reporting to the head unit
+- Uses the original head unit audio path
+- ESP-based hardware
 
 ## Compatibility
 
-MistMusic is currently developed and tested with:
+MistMusic was developed and tested with:
 
 - **Blaupunkt CD30 MP3**
+- Opel vehicles using the compatible CD30 MP3 head unit
 
-The firmware communicates with the head unit using the protocol originally used by its internal CD drive.
-Compatibility with other head units has not been verified.
+The project communicates with the head unit by emulating the behavior of its
+original internal CD drive.
+
+Other head units may use different communication protocols or hardware
+configurations and are currently **not verified**.
+
+## Why replace the CD drive?
+
+The original CD drive is a mechanical device that is increasingly difficult
+to maintain.
+
+MistMusic allows the original head unit to remain in the vehicle while
+replacing the mechanical media source with modern digital playback.
+
+Music can be stored on a USB flash drive instead of burning CDs.
+
+This keeps the original appearance and controls of the car while adding
+convenient digital MP3 playback.
+
+There is no need to replace the factory head unit with a modern aftermarket
+radio just to get USB music playback.
 
 ## How It Works
 
-The original CD mechanism is replaced by a microcontroller-based system.
-The head unit communicates with the replacement firmware as if it were communicating with its original CD drive.
+MistMusic sits where the original internal CD drive was located.
 
-The firmware handles:
-- CD drive communication and protocol responses
-- Playback state management
-- Track and page selection
-- Playback status reporting
-- MP3 decoding
-- Audio output
-- Resume position handling
+The ESP-based hardware communicates with the CD30 MP3 head unit using the
+same communication interface used by the original CD drive.
 
-From the head unit's perspective, the replacement behaves like the original CD playback system while the actual audio source is digital media.
+From the point of view of the head unit, MistMusic behaves like the original
+CD mechanism.
+
+When the user selects a track, changes a virtual CD page or uses the factory
+controls, the firmware interprets these commands and controls the digital
+media player accordingly.
+
+Music files are read from the connected USB flash drive and played through
+the original audio path of the head unit.
+
+This allows the factory controls and display to continue to be used without
+replacing the head unit itself.
+
+## USB MP3 Playback
+
+Music is played directly from a USB flash drive connected to MistMusic.
+
+The USB storage acts as the digital replacement for physical CDs.
+
+MP3 files can be organized into virtual CD pages and tracks, allowing the
+original CD30 MP3 interface to be used for navigating the music collection.
+
+The firmware handles the USB storage, file selection, playback state and
+communication with the head unit.
 
 ## Playback Model
 
-Tracks stored on the media are presented to the head unit using a virtual CD-style structure.
-The firmware maps real media tracks to the track and page structure expected by the original CD interface.
-This allows the original controls of the head unit to be used for navigation without modifying the factory user interface.
-When the end of a track is reached, playback automatically continues with the next available track.
-Track changes across virtual page boundaries are also handled automatically.
+MistMusic presents the music stored on the USB flash drive to the head unit
+as a collection of virtual CD pages and tracks.
+
+The head unit therefore continues to operate using its familiar CD-based
+interface while MistMusic maps those commands to MP3 files on the USB media.
+
+Tracks can be selected using the original controls, and the firmware keeps
+track of the current playback position and virtual CD page.
 
 ## Resume Playback
 
-MistMusic stores the current playback position when playback is stopped.
-When playback is started again, the firmware attempts to resume from the previously stored position.
+MistMusic keeps track of the current playback state.
 
-The resume information includes:
-- Current track
-- Playback position within the media file
+After restarting the system, playback can be restored to the previously
+selected virtual CD page and track.
 
-Playback time is restored together with the playback position so that the head unit continues displaying the correct track time after resume.
+This allows MistMusic to behave more like a permanent replacement for the
+original CD drive rather than a completely separate media player.
 
 ## Audio Playback
 
-MP3 files are decoded by the firmware and sent to the audio output used by the head unit.
-The audio output is configured to work with the existing hardware audio path while preserving compatibility with the original head unit.
-The player handles audio decoder startup and format configuration automatically when playback begins.
+Audio playback uses the original audio path of the CD30 MP3 head unit.
 
-## Project Structure
+MistMusic provides the digital playback side while the factory head unit
+continues to handle the audio system.
 
-The firmware is divided into several functional parts.
-
-### CDC
-
-Handles communication with the head unit and emulates the behavior of the original CD drive.
-
-Responsibilities include:
-- Receiving commands from the head unit
-- Sending protocol responses
-- Playback status reporting
-- Track selection handling
-- Play and stop state management
-
-### Media Player
-
-Controls the overall playback process.
-
-Responsibilities include:
-- Starting and stopping playback
-- Opening tracks
-- Switching tracks
-- Handling end-of-file events
-- Playback resume
-- Playback time tracking
-- Track and page management
-
-### Media Decoder
-
-Handles MP3 decoding and media file access.
-
-Responsibilities include:
-- Opening media files
-- Seeking to playback positions
-- Decoding MP3 frames
-- Providing PCM audio samples
-- Detecting end-of-file conditions
-
-### Media Output
-
-Handles PCM audio output.
-
-Responsibilities include:
-- Audio format configuration
-- Starting and stopping the audio output
-- Sending decoded PCM samples to the audio hardware
+No separate aftermarket audio input is required.
 
 ## Controls
 
-The project is designed to work with the original controls of the **Blaupunkt CD30 MP3** head unit.
-Track selection and playback control are handled through the factory CD interface.
-The intention is to preserve the original user experience as much as possible without adding a separate user interface for normal operation.
+MistMusic is designed to work with the original controls of the Blaupunkt
+CD30 MP3 head unit.
 
-## Configuration
+The factory controls can be used for operations such as:
 
-MistMusic is intended to operate primarily through the original head unit controls.
-Additional connectivity features, such as Wi-Fi, are intended for service or configuration purposes rather than normal everyday playback.
-The head unit should remain the primary user interface.
+- Selecting tracks
+- Changing virtual CD pages
+- Starting and stopping playback
+- Moving between tracks
+- Controlling normal playback functions supported by the head unit
+
+The goal is to keep the user experience as close as possible to using the
+original CD drive.
+
+## Project Structure
+
+The firmware is divided into several major components:
+
+### CDC
+
+Handles communication with the CD30 MP3 head unit and emulates the original
+CD drive behavior.
+
+### Media Player
+
+Controls the playback state, track selection, virtual CD pages, resume
+functionality and related playback logic.
+
+### Media Decoder
+
+Handles decoding of supported audio files.
+
+### Media Output
+
+Handles sending decoded audio to the appropriate audio output path.
+
+## Hardware
+
+MistMusic is based on an ESP microcontroller and additional hardware required
+to interface with the original CD30 MP3 electronics.
+
+The hardware replaces the original internal CD drive and connects to the head
+unit through the corresponding interface.
+
+The project is intended to be installed inside the original head unit in place
+of the CD drive.
+
+For detailed information about the physical hardware integration, wiring,
+connections and installation, feel free to contact the author directly.
 
 ## Development Status
 
-MistMusic **v1.0** is considered a working release.
+**Version 1.0 — working release**
 
-The core functionality has been tested with a **Blaupunkt CD30 MP3** head unit, including:
-- Head unit communication
-- CD drive emulation
-- MP3 playback
-- Track selection
-- Virtual page switching
-- Automatic track changes
-- Playback status reporting
-- Playback resume
-- Playback time restoration
+The core USB MP3 playback functionality has been implemented and tested with
+the Blaupunkt CD30 MP3.
 
-Further development may include additional features and hardware improvements.
+The project is **still under active development**.
+
+The current release provides the core functionality required to replace the
+original CD drive with USB-based MP3 playback, while additional features and
+improvements are planned for future versions.
+
+Some parts of the project may therefore change as development continues.
+
+## Building Your Own MistMusic
+
+MistMusic is an open-source project intended for people who want to build
+their own digital media replacement for the original CD drive.
+
+You will need:
+
+- Compatible ESP-based hardware
+- The required interface electronics
+- A USB flash drive for digital media
+- A compatible Blaupunkt CD30 MP3 head unit
+- Firmware from this repository
+- Appropriate hardware assembly and wiring
+
+Before connecting anything to a vehicle head unit, make sure you understand
+the electrical connections and the required interface.
 
 ## Important Notes
 
-This project was developed specifically around the behavior of the **Blaupunkt CD30 MP3** and the communication of its original internal CD drive.
+This project was developed specifically around the behavior of the
+**Blaupunkt CD30 MP3** and its original internal CD drive communication.
+
 Other head units may use different protocols or hardware configurations.
 Compatibility with other models is not guaranteed.
 
+The project is still being developed, so hardware and firmware behavior may
+change in future versions.
+
+### Hardware and Installation Disclaimer
+
+MistMusic involves modifying the internal hardware of a vehicle head unit.
+
+The author of this project is **not responsible for any damage** caused by
+incorrect assembly, wiring, installation, modification or use of the project.
+
+If you are not sure what you are doing when working with the head unit or
+vehicle electronics, stop and make sure you understand the hardware before
+applying power.
+
+Incorrect wiring, careless modifications or improper installation can damage
+the head unit, the MistMusic hardware, or other vehicle electronics.
+
+**You modify your hardware at your own risk.**
+
+## Hardware Integration Help
+
+The firmware repository primarily contains the software side of MistMusic.
+
+If you need more detailed information about the **physical integration of
+the hardware into the Blaupunkt CD30 MP3**, including wiring, connections,
+installation or hardware assembly, feel free to contact me directly.
+
+I will be happy to help with questions about the physical integration of
+MistMusic into the head unit.
+
 ## License
 
-The license for this project is defined in the repository.
+This project is open source.
+
+See the repository license for the exact licensing terms.
 
 ## Disclaimer
 
-This project involves modification or replacement of the original hardware inside a vehicle head unit.
+MistMusic is an independent project and is not affiliated with, endorsed by
+or sponsored by Opel, Blaupunkt or any other manufacturer mentioned in this
+repository.
+
+All product names and trademarks belong to their respective owners.
+
 Use the project at your own risk.
-Always make sure that modifications to vehicle electronics are performed safely and do not interfere with vehicle operation.
-
-## Support
-
-If you are building MistMusic yourself and need help with the installation, wiring, or assembling the required hardware around the ESP, feel free to contact me.
-I will be happy to help with questions related to the hardware setup and installation.
