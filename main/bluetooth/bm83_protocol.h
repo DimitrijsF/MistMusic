@@ -17,3 +17,4 @@ typedef struct
 
 void BtProto_ProcessPacket(const uint8_t *packet, uint8_t length);
 void BtProto_SendPowerOn(void);
+void BtProto_SendPairing(void);

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MistMusic</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-size: 18px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>MistMusic</h1>
+
+    <button onclick="enablePairing()">Enable Pairing</button>
+
+    <label>
+        <input type="checkbox" id="randomPlayback" onchange="randomChanged()">
+        Random Playback
+    </label>
+
+    <script>
+        function loadState() {
+            fetch('/state')
+                .then(response => response.json())
+                .then(state => {
+                    document.getElementById('randomPlayback').checked = state.random;
+                })
+                .catch(error => {
+                    console.log('Failed to load state:', error);
+                });
+        }
+
+        function randomChanged() {
+            var enabled = document.getElementById('randomPlayback').checked;
+            var value = enabled ? 1 : 0;
+
+            fetch('/random?value=' + value)
+                .catch(error => {
+                    console.log('Failed to update random playback:', error);
+                });
+        }
+
+        function enablePairing() {
+            fetch('/pair')
+                .catch(error => {
+                    console.log('Failed to enable pairing:', error);
+                });
+        }
+
+        loadState();
+    </script>
+
+</body>
+</html>
