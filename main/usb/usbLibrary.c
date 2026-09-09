@@ -5,8 +5,8 @@
 
 #include "esp_log.h"
 
-#include <mediaLibrary.h>
-#include <media/mediaPlayer.h>
+#include <UsbLibrary.h>
+#include <usb/usbPlayer.h>
 
 #define MEDIA_LIBRARY_INDEX_PATH "/usb/cd30_index"
 
@@ -18,13 +18,13 @@ static uint8_t SavedPage = 0;
 static const char* TAG = "MEDIA_LIBRARY";
 static FILE *g_IndexFile = NULL;
 
-static MediaTrack g_CurrentTrack;
+static UsbTrack g_CurrentTrack;
 static uint32_t g_CurrentCrc = 0xFFFFFFFF;
 static uint32_t Fingerprint = 0;
 
-static uint32_t MediaLibrary_UpdateCrc32(uint32_t crc, const uint8_t *data, size_t length);
+static uint32_t UsbLibrary_UpdateCrc32(uint32_t crc, const uint8_t *data, size_t length);
 
-bool MediaLibrary_Begin(void)
+bool UsbLibrary_Begin(void)
 {
     g_TrackCount = 0;
     IsEmpty = true;
@@ -47,7 +47,7 @@ bool MediaLibrary_Begin(void)
 
     return true;
 }
-void MediaLibrary_Finish(void)
+void UsbLibrary_Finish(void)
 {
     if(g_IndexFile != NULL)
     {
@@ -79,7 +79,7 @@ void MediaLibrary_Finish(void)
     Fingerprint = currentPrint;
 }
 
-bool Media_IsSupportedFile(const char *path)
+bool UsbLibrary_IsSupportedFile(const char *path)
 {
     const char *ext = strrchr(path, '.');
 
@@ -89,45 +89,22 @@ bool Media_IsSupportedFile(const char *path)
     return strcasecmp(ext, ".mp3") == 0;
 }
 
-void MediaLibrary_AddTrack(
-    MediaSource source,
-    const char *path)
+void UsbLibrary_AddTrack(const char *path)
 {
     if(g_IndexFile == NULL)
         return;
 
-    MediaTrack track = {0};
+    UsbTrack track = {0};
 
-    track.Source = source;
-
-    strncpy(
-        track.Path,
-        path,
-        sizeof(track.Path) - 1);
-
-    g_CurrentCrc =
-        MediaLibrary_UpdateCrc32(
-            g_CurrentCrc,
-            (const uint8_t *)&track.Source,
-            sizeof(track.Source));
-
-    g_CurrentCrc =
-        MediaLibrary_UpdateCrc32(
-            g_CurrentCrc,
-            (const uint8_t *)track.Path,
-            strlen(track.Path));
-
+    strncpy(track.Path, path, sizeof(track.Path) - 1);
+    g_CurrentCrc = UsbLibrary_UpdateCrc32(g_CurrentCrc, (const uint8_t *)track.Path, strlen(track.Path));
     const uint8_t separator = 0;
 
-    g_CurrentCrc =
-        MediaLibrary_UpdateCrc32(
-            g_CurrentCrc,
-            &separator,
-            sizeof(separator));
+    g_CurrentCrc = UsbLibrary_UpdateCrc32(g_CurrentCrc, &separator, sizeof(separator));
 
     if(fwrite(
         &track,
-        sizeof(MediaTrack),
+        sizeof(UsbTrack),
         1,
         g_IndexFile) != 1)
     {
@@ -142,22 +119,22 @@ void MediaLibrary_AddTrack(
     IsEmpty = false;
 }
 
-void MediaLibrary_Clear(void){
+void UsbLibrary_Clear(void){
     g_TrackCount = 0;
     IsEmpty = true;
 }
 
-uint16_t MediaLibrary_GetCount(void){
+uint16_t UsbLibrary_GetCount(void){
     return g_TrackCount;
 }
-uint16_t MediaLibrary_GetVirtualCount(void){
+uint16_t UsbLibrary_GetVirtualCount(void){
     if(g_TrackCount >= TRACKS_PER_PAGE)
         return SWITCH_TRACK_NUMBER;
     else 
         return g_TrackCount;
 }
 
-MediaTrack *MediaLibrary_GetTrack(uint16_t number){
+UsbTrack *UsbLibrary_GetTrack(uint16_t number){
     if(number == 0 ||
        number > g_TrackCount)
     {
@@ -180,7 +157,7 @@ MediaTrack *MediaLibrary_GetTrack(uint16_t number){
 
     long offset =
         (long)(number - 1) *
-        sizeof(MediaTrack);
+        sizeof(UsbTrack);
 
     if(fseek(
         file,
@@ -193,7 +170,7 @@ MediaTrack *MediaLibrary_GetTrack(uint16_t number){
 
     if(fread(
         &g_CurrentTrack,
-        sizeof(MediaTrack),
+        sizeof(UsbTrack),
         1,
         file) != 1)
     {
@@ -205,10 +182,10 @@ MediaTrack *MediaLibrary_GetTrack(uint16_t number){
 
     return &g_CurrentTrack;
 }
-bool MediaLibrary_IsEmpty(void){
+bool UsbLibrary_IsEmpty(void){
     return IsEmpty;
 }
-static uint32_t MediaLibrary_UpdateCrc32(
+static uint32_t UsbLibrary_UpdateCrc32(
     uint32_t crc,
     const uint8_t *data,
     size_t length)
@@ -227,15 +204,15 @@ static uint32_t MediaLibrary_UpdateCrc32(
     }
     return crc;
 }
-void MediaLibrary_SetSavedTrack(uint8_t track){
+void UsbLibrary_SetSavedTrack(uint8_t track){
     SavedTrack = track;
 }
-uint8_t MediaLibrary_GetSavedTrack(void){
+uint8_t UsbLibrary_GetSavedTrack(void){
     return SavedTrack;
 }
-void MediaLibrary_SetSavedPage(uint8_t page){
+void UsbLibrary_SetSavedPage(uint8_t page){
     SavedPage = page;
 }
-uint8_t MediaLibrary_GetSavedPage(void){
+uint8_t UsbLibrary_GetSavedPage(void){
     return SavedPage;
 }

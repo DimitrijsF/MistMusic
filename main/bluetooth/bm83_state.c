@@ -70,7 +70,9 @@ void BtState_SetOn(void){
 void BtState_SetLinkConnected(void){
     SetLinkState(CONNECTED);
 }
+void BtState_SetLinkDisconnected(void){
+    SetLinkState(DISCONNECTED);
+}
 void BtState_EnablePairing(void){
     SetDeviceState(PAIRING);
-    BtProto_SendPairing();
 }

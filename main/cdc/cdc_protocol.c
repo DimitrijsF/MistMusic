@@ -9,8 +9,8 @@
 #include <cdc/cdc_protocol.h>
 #include <cdc/cdc_uart.h>
 #include <cdc/cdc_state.h>
-#include <media/mediaLibrary.h>
-#include <media/mediaPlayer.h>
+#include <usb/usbLibrary.h>
+#include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
 
 static const char *TAG = "CDC_PROTOCOL";
@@ -284,7 +284,7 @@ static void SendDiskInfo(void){
         .LeadOut1 = 0x05,
         .LeadOut2 = 0x1D,
         .LeadOut3 = 0x40,
-        .Tracks = MediaLibrary_GetVirtualCount(),
+        .Tracks = UsbLibrary_GetVirtualCount(),
         .Unknown = 0x01,
         .Reserved = 0x00
     };
@@ -423,8 +423,8 @@ void CdcProtocol_SendStatusPlayReady(void){
     CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
 }
 static void CheckSavedTrack(void){
-    uint8_t track = MediaLibrary_GetSavedTrack();
+    uint8_t track = UsbLibrary_GetSavedTrack();
     if(track == 0)
         return;
-    Player_SetCurrentTrackPage(track, MediaLibrary_GetSavedPage());
+    Player_SetCurrentTrackPage(track, UsbLibrary_GetSavedPage());
 }

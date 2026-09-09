@@ -4,10 +4,10 @@ idf_component_register(
 
         "usb/usbHost.c"
         "usb/usbStorage.c"
+        "usb/usbLibrary.c"
+        "usb/usbPlayer.c"
+        "usb/usbDecoder.c"
         
-        "media/mediaLibrary.c"
-        "media/mediaPlayer.c"
-        "media/mediaDecoder.c"
         "media/mediaOutput.c"
 
         "cdc/cdc_protocol.c"
@@ -19,9 +19,12 @@ idf_component_register(
         "bluetooth/bm83_uart.c"
         "bluetooth/bm83_protocol.c"
         "bluetooth/bm83_state.c"
+        "bluetooth/bm83_player.c"
 
         "wifi/wifiService.c"
         "wifi/wifiHttp.c"
+
+        "sourceManager/sourceManager.c"
 
         "components/mp3dec.c"
         "components/mp3tabs.c"
@@ -47,6 +50,7 @@ idf_component_register(
         "cdc"
         "bluetooth"
         "wifi"
+        "sourceManager"
         "components/pub"
         "components/real"
 

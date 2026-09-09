@@ -67,17 +67,22 @@ static void ProcessStatusEvent(uint8_t cmdData){
             {
                 BtState_SetOn(); 
                 if(!BtState_IsInitialized())
+                {
                     SendPacket(&ProtoSetATRx);
+                    BtState_SetInitDone();
+                }
             }
             break;
         case 0x06: //A2DP connected (phone connected)
-            if(BmState_GetBtState() == POWERON){
+            if(BmState_GetBtState() == POWERON || BmState_GetBtState() == PAIRING){
                 BtState_SetLinkConnected();
             }
             break; 
-        case 0x15: break; //acl disconnected 
+        case 0x15: //acl disconnected 
+            if(BmState_GetLinkState() == CONNECTED)
+                BtState_SetLinkDisconnected();
+            break; 
         default: break;
-            
     }
 }
 static void ProcessCallEvents(uint8_t cmdData){
@@ -96,4 +101,5 @@ void BtProto_SendPowerOn(void){
 }
 void BtProto_SendPairing(void){
     SendPacket(&ProtoSetPairing);
+    BtState_EnablePairing();
 }

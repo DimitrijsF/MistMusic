@@ -5,9 +5,9 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 
-#include <media/mediaPlayer.h>
-#include <media/mediaLibrary.h>
-#include <media/mediaDecoder.h>
+#include <usb/usbPlayer.h>
+#include <usb/usbLibrary.h>
+#include <usb/usbDecoder.h>
 #include <media/mediaOutput.h>
 
 #include <mp3dec.h>
@@ -63,8 +63,8 @@ static bool FillBuffer(void)
 
 bool Decoder_Open(uint16_t trackNumber)
 {
-    MediaTrack *track =
-        MediaLibrary_GetTrack(trackNumber);
+    UsbTrack *track =
+        UsbLibrary_GetTrack(trackNumber);
 
     if(track == NULL)
         return false;
@@ -338,8 +338,8 @@ bool Decoder_OpenAt(
     uint16_t trackNumber,
     long position)
 {
-    MediaTrack *track =
-        MediaLibrary_GetTrack(trackNumber);
+    UsbTrack *track =
+        UsbLibrary_GetTrack(trackNumber);
 
     if(track == NULL)
         return false;

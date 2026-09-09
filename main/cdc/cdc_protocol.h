@@ -2,7 +2,7 @@
 
 #include <inttypes.h>
 
-#include <media/mediaPlayer.h>
+#include <usb/usbPlayer.h>
 
 typedef struct
 {

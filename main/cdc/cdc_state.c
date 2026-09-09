@@ -8,8 +8,8 @@
 #include <cdc_state.h>
 #include <cdc_protocol.h>
 #include <cdc_uart.h>
-#include <media/mediaLibrary.h>
-#include <media/mediaPlayer.h>
+#include <usb/usbLibrary.h>
+#include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
 
 static bool UsbRandom = false;
@@ -49,7 +49,7 @@ void CdcBoot(void){
     SetCdcState(BOOT);
     CdcUart_Init();
     vTaskDelay(pdMS_TO_TICKS(500));
-    if(UsbStorage_DriveIn() && !MediaLibrary_IsEmpty())
+    if(UsbStorage_DriveIn() && !UsbLibrary_IsEmpty())
         SetCdcState(STOP); 
     else
         SetCdcState(NO_DISK);

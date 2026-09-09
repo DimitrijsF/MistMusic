@@ -8,8 +8,8 @@
 #include "usb/msc_host_vfs.h"
 
 #include "usbStorage.h"
-#include "media/mediaLibrary.h"
-#include <media/mediaPlayer.h>
+#include "usb/usbLibrary.h"
+#include <usb/usbPlayer.h>
 #include <cdc/cdc_state.h>
 #include <cdc/cdc_protocol.h>
 
@@ -42,7 +42,7 @@ static void StorageCallback(const msc_host_event_t *event, void *arg)
         case MSC_DEVICE_DISCONNECTED:
             g_DeviceConnected = false;
             g_DeviceDisconnectRequested = true;
-            MediaLibrary_Clear();
+            UsbLibrary_Clear();
             ESP_LOGI(TAG, "MSC device disconnected");
         break;
 
@@ -128,9 +128,9 @@ static void UsbStorage_ScanDirectory(const char *path)
         {
             UsbStorage_ScanDirectory(fullPath);
         }
-        else if(Media_IsSupportedFile(fullPath))
+        else if(UsbLibrary_IsSupportedFile(fullPath))
         {
-            MediaLibrary_AddTrack(MEDIA_SOURCE_USB, fullPath);
+            UsbLibrary_AddTrack(fullPath);
         }
     }
 
@@ -163,12 +163,12 @@ static esp_err_t UsbStorage_ReadFS(void){
 
     ESP_LOGI(TAG,
          "Filesystem mounted at /usb");
-    if(!MediaLibrary_Begin())
+    if(!UsbLibrary_Begin())
         return ESP_FAIL;
 
     UsbStorage_ScanDirectory("/usb");
 
-    MediaLibrary_Finish();
+    UsbLibrary_Finish();
     return ESP_OK;
 }
 
@@ -179,7 +179,7 @@ static void UsbStorageTask(void *arg){
         {
             g_EjectRequested = false;
             Player_Stop();
-            MediaLibrary_Clear();
+            UsbLibrary_Clear();
             if (g_Vfs != NULL)
             {
                 msc_host_vfs_unregister(g_Vfs);
@@ -216,7 +216,7 @@ static void UsbStorageTask(void *arg){
             g_DeviceInstalled = false;
             g_DeviceAddress = 0;
 
-            MediaLibrary_Clear();
+            UsbLibrary_Clear();
 
             ESP_LOGI(TAG, "USB storage disconnected");
         }
@@ -224,7 +224,7 @@ static void UsbStorageTask(void *arg){
         {
             g_DeviceInstalled = true;
             Player_ResetSavedState();   
-            MediaLibrary_Clear();
+            UsbLibrary_Clear();
             UsbStorage_OpenDevice();
             if (GetCdcState() != STANDBY)
                 CdcLoadDisk();

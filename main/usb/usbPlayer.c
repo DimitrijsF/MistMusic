@@ -12,10 +12,10 @@
 #include <cdc/cdc_state.h>
 #include <cdc/cdc_protocol.h>
 
-#include <media/mediaPlayer.h>
-#include <media/mediaLibrary.h>
+#include <usbPlayer.h>
+#include <usbLibrary.h>
 #include <media/mediaOutput.h>
-#include <mediaDecoder.h>
+#include <usbDecoder.h>
 
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
@@ -50,7 +50,7 @@ static uint16_t Player_GetRealTrack()
 }
 static void Player_CalcTrackSwitch(void)
 {
-    uint16_t trackCount = MediaLibrary_GetCount();
+    uint16_t trackCount = UsbLibrary_GetCount();
     requestedPage = CurrentPage;
     if(CurrentTrack == TRACKS_PER_PAGE)
     {
@@ -93,7 +93,7 @@ void Player_SwitchTrack(uint8_t track)
 
     if(CdcGetUsbRandom()){
         if(track > CurrentTrack){
-            uint32_t randomRealTrack = (esp_random() % MediaLibrary_GetCount()) + 1;
+            uint32_t randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
             requestedPage = (randomRealTrack - 1) / TRACKS_PER_PAGE;
             requestedTrack = ((randomRealTrack - 1) % TRACKS_PER_PAGE) + 1;
         }
@@ -108,7 +108,7 @@ void Player_SwitchTrack(uint8_t track)
         else
         {
             uint16_t requestedRealTrack = Player_GetRealTrackByPosition(CurrentPage, track);
-            if(requestedRealTrack > MediaLibrary_GetCount()){
+            if(requestedRealTrack > UsbLibrary_GetCount()){
                 requestedPage = 0;
                 requestedTrack = 1;
             }
@@ -126,7 +126,7 @@ static bool Player_CalcNextTrack(
     uint8_t *headTrack)
 {
     uint16_t realTrack = Player_GetRealTrack();
-    uint16_t trackCount = MediaLibrary_GetCount();
+    uint16_t trackCount = UsbLibrary_GetCount();
 
     *nextPage = CurrentPage;
     *nextTrack = CurrentTrack;
@@ -375,8 +375,8 @@ void Player_SaveCurrentTrackPage(void){
     if(!StateSaved)
     {
         ESP_LOGI(TAG, "Saving current track: %u, page: %u", CurrentTrack, CurrentPage);
-        MediaLibrary_SetSavedPage(CurrentPage);
-        MediaLibrary_SetSavedTrack(CurrentTrack);
+        UsbLibrary_SetSavedPage(CurrentPage);
+        UsbLibrary_SetSavedTrack(CurrentTrack);
         StateSaved = true;
     }
 }
