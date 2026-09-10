@@ -6,6 +6,7 @@
 
 #include "usb/msc_host.h"
 #include "usb/msc_host_vfs.h"
+#include <sourceManager/sourceManager.h>
 
 #include "usbStorage.h"
 #include "usb/usbLibrary.h"
@@ -34,6 +35,7 @@ static void StorageCallback(const msc_host_event_t *event, void *arg)
             g_DeviceInstalled = false;
             g_DeviceDisconnectRequested = false;
             g_EjectRequested = false;
+            SrcManager_CheckSource();
             ESP_LOGI(TAG,
              "MSC device connected (address=%u)",
              g_DeviceAddress);
@@ -178,7 +180,7 @@ static void UsbStorageTask(void *arg){
         if (g_EjectRequested)
         {
             g_EjectRequested = false;
-            Player_Stop();
+            UsbPlayer_Stop();
             UsbLibrary_Clear();
             if (g_Vfs != NULL)
             {
@@ -199,7 +201,7 @@ static void UsbStorageTask(void *arg){
         if (g_DeviceDisconnectRequested)
         {
             g_DeviceDisconnectRequested = false;
-            Player_Stop();
+            UsbPlayer_Stop();
 
             if (g_Vfs != NULL)
             {
@@ -217,13 +219,13 @@ static void UsbStorageTask(void *arg){
             g_DeviceAddress = 0;
 
             UsbLibrary_Clear();
-
+            SrcManager_CheckSource();
             ESP_LOGI(TAG, "USB storage disconnected");
         }
         if (g_DeviceConnected && !g_DeviceInstalled)
         {
             g_DeviceInstalled = true;
-            Player_ResetSavedState();   
+            UsbPlayer_ResetSavedState();   
             UsbLibrary_Clear();
             UsbStorage_OpenDevice();
             if (GetCdcState() != STANDBY)

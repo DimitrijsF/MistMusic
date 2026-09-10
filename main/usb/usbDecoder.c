@@ -182,7 +182,7 @@ static DecoderResult Decoder_DecodeFrame(void)
                 Output_Start();
             }
 
-            Player_UpdateTime(
+            UsbPlayer_UpdateTime(
                 g_FrameInfo.outputSamps /
                     g_FrameInfo.nChans,
                 g_FrameInfo.samprate);

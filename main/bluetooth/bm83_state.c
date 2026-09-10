@@ -1,6 +1,8 @@
 #include <bm83_state.h>
 #include <bm83_protocol.h>
 
+#include <sourceManager/sourceManager.h>
+
 #include <stdbool.h>
 #include <esp_log.h>
 
@@ -68,9 +70,11 @@ void BtState_SetOn(void){
     SetDeviceState(POWERON);
 }
 void BtState_SetLinkConnected(void){
+    SrcManager_CheckSource();
     SetLinkState(CONNECTED);
 }
 void BtState_SetLinkDisconnected(void){
+    SrcManager_CheckSource();
     SetLinkState(DISCONNECTED);
 }
 void BtState_EnablePairing(void){

@@ -13,14 +13,14 @@ typedef struct
     uint8_t Track;
 } PlayStatus;
 
-void Player_SwitchTrack(uint8_t track);
-void Player_Play(void);
-void Player_Stop(void);
-void Player_Reset(void);
+void UsbPlayer_SwitchTrack(uint8_t track);
+void UsbPlayer_Play(void);
+void UsbPlayer_Stop(void);
+void UsbPlayer_Reset(void);
 void Player_FF(bool enable);
 void Player_Rew(bool enable);
-void Player_UpdateTime(uint16_t samples, uint32_t sampleRate);
-void Player_SetCurrentTrackPage(uint8_t track, uint8_t page);
-void Player_SaveCurrentTrackPage(void);
-void Player_ResetSavedState(void);
-void Player_SendCurrentStatus(void);
+void UsbPlayer_UpdateTime(uint16_t samples, uint32_t sampleRate);
+void UsbPlayer_SetCurrentTrackPage(uint8_t track, uint8_t page);
+void UsbPlayer_SaveCurrentTrackPage(void);
+void UsbPlayer_ResetSavedState(void);
+void UsbPlayer_SendCurrentStatus(void);

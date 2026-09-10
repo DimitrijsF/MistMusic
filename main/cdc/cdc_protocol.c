@@ -13,6 +13,8 @@
 #include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
 
+#include <sourceManager/sourceManager.h>
+
 static const char *TAG = "CDC_PROTOCOL";
 static LoadingState loadingState = STEP0;
 static EjectingState ejectingState = STEP0;
@@ -114,27 +116,21 @@ void HandlePlayBack(const uint8_t *packet){
     CdcState state = GetCdcState();
     if(state != PLAY && state != STOP)
         return;
-        
     switch(packet[3])
     {
         case 0x00:
-            if(GetCdcState() != PLAY)
-                Player_Play();
+            SrcManager_Play();
             break;
         //other play state like ff, rew etc - ignored intentially
     }
 }
 void HandleTrackSelect(const uint8_t *packet){
     uint8_t track = packet[2];
-    Player_SwitchTrack(track);
+    
 }
 void HandleStop(const uint8_t *packet){
     (void)packet;
-    if(GetCdcState() == PLAY)
-    {
-        Player_Stop();
-        CdcStopPlay();
-    }
+    SrcManager_Stop();
 }
 void HandlePlayModeRequest(const uint8_t *packet){
     (void)packet;
@@ -209,12 +205,12 @@ void HandleLoadingState(const uint8_t *packet){
     else if(state == STOP)
         CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
     else if(state == PLAY)
-        Player_SendCurrentStatus();
+        UsbPlayer_SendCurrentStatus();
 }
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
-    Player_SaveCurrentTrackPage();
-    Player_Stop();
+    UsbPlayer_SaveCurrentTrackPage();
+    UsbPlayer_Stop();
     CdcStopPlay();
     CdcEjectStart();
     CdcUart_Send(ProtoStatusEjecting1, sizeof(ProtoStatusEjecting1));
@@ -222,7 +218,7 @@ static void HandleEjectRequest(const uint8_t *packet){
     SetEjectingState(FINISH);
     SetLoadingState(STEP0);
     UsbStorageEject();
-    Player_Reset();
+    UsbPlayer_Reset();
 }
 static void HandleDBRequest(const uint8_t *packet){
     (void)packet;
@@ -426,5 +422,5 @@ static void CheckSavedTrack(void){
     uint8_t track = UsbLibrary_GetSavedTrack();
     if(track == 0)
         return;
-    Player_SetCurrentTrackPage(track, UsbLibrary_GetSavedPage());
+    UsbPlayer_SetCurrentTrackPage(track, UsbLibrary_GetSavedPage());
 }

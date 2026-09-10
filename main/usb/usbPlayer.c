@@ -86,7 +86,7 @@ static void Player_CalcTrackSwitch(void)
     }
     requestedTrack = CurrentTrack;
 }
-void Player_SwitchTrack(uint8_t track)
+void UsbPlayer_SwitchTrack(uint8_t track)
 {
     requestedHeadTrack = track;
     requestedPage = CurrentPage;
@@ -164,7 +164,7 @@ static bool Player_CalcNextTrack(
     return true;
 }
 
-void Player_Play(void){
+void UsbPlayer_Play(void){
     if(playerTaskHandle != NULL)
         return;
     playerStopRequested = false;
@@ -324,11 +324,11 @@ common_exit:
     vTaskDelete(NULL);
 }
 
-void Player_Stop(void){
+void UsbPlayer_Stop(void){
     if(GetCdcState() != NO_DISK)
         playerStopRequested = true;
 }
-void Player_Reset(void)
+void UsbPlayer_Reset(void)
 {
     CurrentPage = 0;
     CurrentTrack = 1;
@@ -339,7 +339,7 @@ void Player_Reset(void)
     ResumeTrack = 0;
     ResumeSeconds = 0;
 }
-void Player_UpdateTime(uint16_t samples, uint32_t sampleRate)
+void UsbPlayer_UpdateTime(uint16_t samples, uint32_t sampleRate)
 {
     if(sampleRate == 0)
         return;
@@ -356,7 +356,7 @@ void Player_UpdateTime(uint16_t samples, uint32_t sampleRate)
     };
     CdcProtocol_SendPlayStatus(status);
 }
-void Player_SendCurrentStatus(void){
+void UsbPlayer_SendCurrentStatus(void){
     uint32_t Minutes = PlayedSeconds / 60;
     uint32_t Seconds = PlayedSeconds % 60;
     PlayStatus status =
@@ -367,11 +367,11 @@ void Player_SendCurrentStatus(void){
     };
     CdcProtocol_SendPlayStatus(status);
 }
-void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
+void UsbPlayer_SetCurrentTrackPage(uint8_t track, uint8_t page){
     CurrentPage = page;
     CurrentTrack = track;
 }
-void Player_SaveCurrentTrackPage(void){
+void UsbPlayer_SaveCurrentTrackPage(void){
     if(!StateSaved)
     {
         ESP_LOGI(TAG, "Saving current track: %u, page: %u", CurrentTrack, CurrentPage);
@@ -380,6 +380,6 @@ void Player_SaveCurrentTrackPage(void){
         StateSaved = true;
     }
 }
-void Player_ResetSavedState(void){
+void UsbPlayer_ResetSavedState(void){
     StateSaved = false;
 }
