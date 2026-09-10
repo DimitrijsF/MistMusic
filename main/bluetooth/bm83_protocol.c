@@ -63,7 +63,7 @@ static void ProcessStatusEvent(uint8_t cmdData){
     switch (cmdData)
     {
         case 0x0F: //standby
-            if(BmState_GetBtState() == STARTING)
+            if(BmState_GetBtState() == BT_STARTING)
             {
                 BtState_SetOn(); 
                 if(!BtState_IsInitialized())
@@ -74,12 +74,12 @@ static void ProcessStatusEvent(uint8_t cmdData){
             }
             break;
         case 0x06: //A2DP connected (phone connected)
-            if(BmState_GetBtState() == POWERON || BmState_GetBtState() == PAIRING){
+            if(BmState_GetBtState() == BT_POWERON || BmState_GetBtState() == BT_PAIRING){
                 BtState_SetLinkConnected();
             }
             break; 
         case 0x15: //acl disconnected 
-            if(BmState_GetLinkState() == CONNECTED)
+            if(BmState_GetLinkState() == LINK_CONNECTED)
                 BtState_SetLinkDisconnected();
             break; 
         default: break;

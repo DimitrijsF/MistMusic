@@ -3,13 +3,13 @@
 
 typedef enum
 {
-    STANDBY,
-    BOOT,
-    NO_DISK,
-    LOADING,
-    EJECTING,
-    PLAY,
-    STOP
+    CDC_STANDBY,
+    CDC_BOOT,
+    CDC_NOCD,
+    CDC_LOADING,
+    CDC_EJECTING,
+    CDC_PLAY,
+    CDC_STOP
 } CdcState;
 
 CdcState GetCdcState(void);

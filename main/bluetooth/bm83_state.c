@@ -7,8 +7,8 @@
 #include <esp_log.h>
 
 static bool IsInitialized = false;
-static BtState DeviceState = POWEROFF;
-static BtLinkState LinkState = DISCONNECTED;
+static BtState DeviceState = BT_POWEROFF;
+static BtLinkState LinkState = LINK_DISCONNECTED;
 
 static const char *TAG = "BT_STATE";
 
@@ -22,10 +22,10 @@ static const char *DeviceStateToString(BtState state)
 {
     switch (state)
     {
-        case STARTING: return "STARTING";
-        case POWEROFF: return "POWEROFF";
-        case POWERON: return "POWERON";
-        case PAIRING: return "PAIRING";
+        case BT_STARTING: return "BT_STARTING";
+        case BT_POWEROFF: return "BT_POWEROFF";
+        case BT_POWERON: return "BT_POWERON";
+        case BT_PAIRING: return "BT_PAIRING";
         default: return "UNKNOWN";
     }
 }
@@ -33,12 +33,12 @@ static const char *LinkStateToString(BtLinkState state)
 {
     switch (state)
     {
-        case DISCONNECTED: return "DISCONNECTED";
-        case CONNECTED: return "CONNECTED";
-        case STOPPED: return "STOPPED";
-        case PLAYING: return "PLAYING";
-        case PAUSE: return "PAUSE";
-        case CALL: return "CALL";
+        case LINK_DISCONNECTED: return "LINK_DISCONNECTED";
+        case LINK_CONNECTED: return "LINK_CONNECTED";
+        case LINK_STOP: return "LINK_STOP";
+        case LINK_PLAY: return "LINK_PLAY";
+        case LINK_PAUSE: return "LINK_PAUSE";
+        case LINK_CALL: return "LINK_CALL";
         default: return "UNKNOWN";
     }
 }
@@ -63,20 +63,20 @@ void BtState_SetInitDone(void){
     IsInitialized = true;
 }
 void BtState_Enable(void){
-    SetDeviceState(STARTING);
+    SetDeviceState(BT_STARTING);
     BtProto_SendPowerOn();
 }
 void BtState_SetOn(void){
-    SetDeviceState(POWERON);
+    SetDeviceState(BT_POWERON);
 }
 void BtState_SetLinkConnected(void){
     SrcManager_CheckSource();
-    SetLinkState(CONNECTED);
+    SetLinkState(LINK_CONNECTED);
 }
 void BtState_SetLinkDisconnected(void){
     SrcManager_CheckSource();
-    SetLinkState(DISCONNECTED);
+    SetLinkState(LINK_DISCONNECTED);
 }
 void BtState_EnablePairing(void){
-    SetDeviceState(PAIRING);
+    SetDeviceState(BT_PAIRING);
 }

@@ -3,19 +3,19 @@
 #include <stdbool.h>
 
 typedef enum{
-    STARTING,
-    POWEROFF,
-    POWERON,
-    PAIRING
+    BT_STARTING,
+    BT_POWEROFF,
+    BT_POWERON,
+    BT_PAIRING
 } BtState;
 
 typedef enum{
-    DISCONNECTED,
-    CONNECTED,
-    STOPPED,
-    PLAYING,
-    PAUSE,
-    CALL
+    LINK_DISCONNECTED,
+    LINK_CONNECTED,
+    LINK_STOP,
+    LINK_PLAY,
+    LINK_PAUSE,
+    LINK_CALL
 } BtLinkState;
 
 BtLinkState BmState_GetLinkState(void);

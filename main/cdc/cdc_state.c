@@ -14,7 +14,7 @@
 
 static bool UsbRandom = false;
 
-static CdcState State = STANDBY;
+static CdcState State = CDC_STANDBY;
 static const char *TAG = "CDC_STATE";
 
 static const char *StateToString(CdcState state);
@@ -35,46 +35,46 @@ static const char *StateToString(CdcState state)
 {
     switch (state)
     {
-        case STANDBY: return "STANDBY";
-        case BOOT:    return "BOOT";
-        case NO_DISK: return "NO_DISK";
-        case LOADING: return "LOADING";
-        case EJECTING: return "EJECTING";
-        case PLAY: return "PLAY";
-        case STOP: return "STOP";
+        case CDC_STANDBY: return "CDC_STANDBY";
+        case CDC_BOOT:    return "CDC_BOOT";
+        case CDC_NOCD: return "CDC_NOCD";
+        case CDC_LOADING: return "CDC_LOADING";
+        case CDC_EJECTING: return "CDC_EJECTING";
+        case CDC_PLAY: return "CDC_PLAY";
+        case CDC_STOP: return "CDC_STOP";
         default: return "UNKNOWN";
     }
 }
 void CdcBoot(void){
-    SetCdcState(BOOT);
+    SetCdcState(CDC_BOOT);
     CdcUart_Init();
     vTaskDelay(pdMS_TO_TICKS(500));
     if(UsbStorage_DriveIn() && !UsbLibrary_IsEmpty())
-        SetCdcState(STOP); 
+        SetCdcState(CDC_STOP); 
     else
-        SetCdcState(NO_DISK);
+        SetCdcState(CDC_NOCD);
 }
 void CdcStandby(void){
-    SetCdcState(STANDBY);
+    SetCdcState(CDC_STANDBY);
     UartShutDown();
 }
 void CdcLoadDisk(void){
-    SetCdcState(LOADING);
+    SetCdcState(CDC_LOADING);
     ProtocolDriveIn();
 }
 void CdcPlay(void){
-    SetCdcState(PLAY);
+    SetCdcState(CDC_PLAY);
 }
 void CdcStopPlay(void){
-    if(State != NO_DISK)
-        SetCdcState(STOP);
-    SetCdcState(STOP);
+    if(State != CDC_NOCD)
+        SetCdcState(CDC_STOP);
+    SetCdcState(CDC_STOP);
 }
 void CdcEjectStart(void){
-    SetCdcState(EJECTING);
+    SetCdcState(CDC_EJECTING);
 }
 void CdcNoDisk(void){
-    SetCdcState(NO_DISK);
+    SetCdcState(CDC_NOCD);
 }
 void CdcSetUsbRandom(bool value){
     UsbRandom = value;

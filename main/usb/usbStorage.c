@@ -228,7 +228,7 @@ static void UsbStorageTask(void *arg){
             UsbPlayer_ResetSavedState();   
             UsbLibrary_Clear();
             UsbStorage_OpenDevice();
-            if (GetCdcState() != STANDBY)
+            if (GetCdcState() != CDC_STANDBY)
                 CdcLoadDisk();
             if (g_Device != NULL)
                 UsbStorage_ReadFS();

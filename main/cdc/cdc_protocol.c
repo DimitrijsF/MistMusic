@@ -114,7 +114,7 @@ void Handle5101(const uint8_t *packet){
 }
 void HandlePlayBack(const uint8_t *packet){
     CdcState state = GetCdcState();
-    if(state != PLAY && state != STOP)
+    if(state != CDC_PLAY && state != CDC_STOP)
         return;
     switch(packet[3])
     {
@@ -135,7 +135,7 @@ void HandleStop(const uint8_t *packet){
 void HandlePlayModeRequest(const uint8_t *packet){
     (void)packet;
     CdcState state = GetCdcState();
-    if(state == LOADING){
+    if(state == CDC_LOADING){
         switch (loadingState)
         {
             case STEP0: break;
@@ -157,11 +157,11 @@ void HandlePlayModeRequest(const uint8_t *packet){
             break;
         }
     }   
-    if(state == STOP)
+    if(state == CDC_STOP)
         CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay)); 
-    if(state == NO_DISK)
+    if(state == CDC_NOCD)
         CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk)); 
-    if(state == PLAY){
+    if(state == CDC_PLAY){
         CdcProtocol_SendStatusTocReady();
         CdcProtocol_SendStatusPlayReady();
     }
@@ -180,15 +180,15 @@ void HandleStatus(const uint8_t *packet)
     (void)packet;
     switch(GetCdcState())
     {
-        case NO_DISK:
+        case CDC_NOCD:
             CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk)); 
             break;
-        case STANDBY: break;
-        case BOOT:    break;
-        case LOADING: break;
-        case EJECTING: break;
-        case PLAY: break;
-        case STOP:
+        case CDC_STANDBY: break;
+        case CDC_BOOT:    break;
+        case CDC_LOADING: break;
+        case CDC_EJECTING: break;
+        case CDC_PLAY: break;
+        case CDC_STOP:
             CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay)); 
             break;
     }
@@ -196,15 +196,15 @@ void HandleStatus(const uint8_t *packet)
 void HandleLoadingState(const uint8_t *packet){
     (void)packet;
     CdcState state = GetCdcState();
-    if(state == LOADING){
+    if(state == CDC_LOADING){
         if(loadingState != READY)
             CdcUart_Send(ProtoPlayAnswerLoad, sizeof(ProtoPlayAnswerLoad));
         else
             CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
     }
-    else if(state == STOP)
+    else if(state == CDC_STOP)
         CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
-    else if(state == PLAY)
+    else if(state == CDC_PLAY)
         UsbPlayer_SendCurrentStatus();
 }
 static void HandleEjectRequest(const uint8_t *packet){
@@ -222,7 +222,7 @@ static void HandleEjectRequest(const uint8_t *packet){
 }
 static void HandleDBRequest(const uint8_t *packet){
     (void)packet;
-    if(GetCdcState() == EJECTING && ejectingState == FINISH){
+    if(GetCdcState() == CDC_EJECTING && ejectingState == FINISH){
         CdcUart_Send(ProtoStatusDiskInSeq2, sizeof(ProtoStatusDiskInSeq2));
         CdcUart_Send(ProtoStatusDiskInSeq1, sizeof(ProtoStatusDiskInSeq1));
         vTaskDelay(pdMS_TO_TICKS(1000));

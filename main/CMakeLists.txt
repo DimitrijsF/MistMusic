@@ -7,6 +7,7 @@ idf_component_register(
         "usb/usbLibrary.c"
         "usb/usbPlayer.c"
         "usb/usbDecoder.c"
+        "usb/usbState.c"
         
         "media/mediaOutput.c"
 

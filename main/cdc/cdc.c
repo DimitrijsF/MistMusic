@@ -18,7 +18,7 @@ static bool IsHeadEnabled(void);
 static void CdcStateTask(void *arg){
     while (true)
     {  
-        if (GetCdcState() == STANDBY)
+        if (GetCdcState() == CDC_STANDBY)
         {
             if(IsHeadEnabled()){
                 CdcBoot();

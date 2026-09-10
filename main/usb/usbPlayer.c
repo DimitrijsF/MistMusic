@@ -215,7 +215,7 @@ static void PlayerTask(void *arg)
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
     CdcPlay();
 
-    while(GetCdcState() == PLAY)
+    while(GetCdcState() == CDC_PLAY)
     {
         if(playerStopRequested)
         {
@@ -325,7 +325,7 @@ common_exit:
 }
 
 void UsbPlayer_Stop(void){
-    if(GetCdcState() != NO_DISK)
+    if(GetCdcState() != CDC_NOCD)
         playerStopRequested = true;
 }
 void UsbPlayer_Reset(void)
