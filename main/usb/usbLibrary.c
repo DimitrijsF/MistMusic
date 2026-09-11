@@ -6,7 +6,6 @@
 #include "esp_log.h"
 
 #include <UsbLibrary.h>
-#include <usb/usbPlayer.h>
 
 #define MEDIA_LIBRARY_INDEX_PATH "/usb/cd30_index"
 
@@ -129,7 +128,7 @@ uint16_t UsbLibrary_GetCount(void){
 }
 uint16_t UsbLibrary_GetVirtualCount(void){
     if(g_TrackCount >= TRACKS_PER_PAGE)
-        return SWITCH_TRACK_NUMBER;
+        return VIRTUAL_TRACK_COUNT;
     else 
         return g_TrackCount;
 }

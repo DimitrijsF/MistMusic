@@ -63,7 +63,7 @@ static void ProcessStatusEvent(uint8_t cmdData){
     switch (cmdData)
     {
         case 0x0F: //standby
-            if(BmState_GetBtState() == BT_STARTING)
+            if(BtState_GetBtState() == BT_STARTING)
             {
                 BtState_SetOn(); 
                 if(!BtState_IsInitialized())
@@ -74,12 +74,12 @@ static void ProcessStatusEvent(uint8_t cmdData){
             }
             break;
         case 0x06: //A2DP connected (phone connected)
-            if(BmState_GetBtState() == BT_POWERON || BmState_GetBtState() == BT_PAIRING){
+            if(BtState_GetBtState() == BT_POWERON || BtState_GetBtState() == BT_PAIRING){
                 BtState_SetLinkConnected();
             }
             break; 
         case 0x15: //acl disconnected 
-            if(BmState_GetLinkState() == LINK_CONNECTED)
+            if(BtState_GetLinkState() != LINK_DISCONNECTED)
                 BtState_SetLinkDisconnected();
             break; 
         default: break;
@@ -96,6 +96,7 @@ void BtProto_ProcessPacket(const uint8_t *packet, uint8_t length){
     }
 }
 void BtProto_SendPowerOn(void){
+    vTaskDelay(pdMS_TO_TICKS(5000));
     SendPacket(&ProtoPowerOnPress);
     SendPacket(&ProtoPowerOnRelease);
 }

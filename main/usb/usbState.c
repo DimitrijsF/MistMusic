@@ -1,9 +1,10 @@
 #include <usbState.h>
 #include <string.h>
 #include <esp_log.h>
+#include <stdbool.h>
 
 static const char *TAG = "USB_STATE";
-
+static bool UsbRandom = false;
 static UsbState State = USB_NODISK;
 
 UsbState UsbState_GetState(void){
@@ -24,7 +25,7 @@ static void SetUsbState(UsbState state){
     if(state != State){
         UsbState current = State;
         State = state;
-        ESP_LOGI(TAG, "Source changed %s -> %s", UsbStateToString(current), UsbStateToString(state));
+        ESP_LOGI(TAG, "USB state changed %s -> %s", UsbStateToString(current), UsbStateToString(state));
     }
 }
 void UsbState_Eject(void){
@@ -38,4 +39,10 @@ void UsbState_Stop(void){
 }
 void UsbState_Play(void){
     SetUsbState(USB_PLAY);
+}
+void UsbState_SetUsbRandom(bool value){
+    UsbRandom = value;
+}
+bool UsbState_GetUsbRandom(void){
+    return UsbRandom;
 }

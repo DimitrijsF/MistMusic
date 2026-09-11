@@ -1,10 +1,12 @@
+#include <stdbool.h>
+#include <esp_log.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include <bm83_state.h>
 #include <bm83_protocol.h>
 
 #include <sourceManager/sourceManager.h>
-
-#include <stdbool.h>
-#include <esp_log.h>
 
 static bool IsInitialized = false;
 static BtState DeviceState = BT_POWEROFF;
@@ -12,10 +14,10 @@ static BtLinkState LinkState = LINK_DISCONNECTED;
 
 static const char *TAG = "BT_STATE";
 
-BtLinkState BmState_GetLinkState(void){
+BtLinkState BtState_GetLinkState(void){
     return LinkState;
 }
-BtState BmState_GetBtState(void){
+BtState BtState_GetBtState(void){
     return DeviceState;
 }
 static const char *DeviceStateToString(BtState state)
@@ -34,7 +36,6 @@ static const char *LinkStateToString(BtLinkState state)
     switch (state)
     {
         case LINK_DISCONNECTED: return "LINK_DISCONNECTED";
-        case LINK_CONNECTED: return "LINK_CONNECTED";
         case LINK_STOP: return "LINK_STOP";
         case LINK_PLAY: return "LINK_PLAY";
         case LINK_PAUSE: return "LINK_PAUSE";
@@ -70,13 +71,22 @@ void BtState_SetOn(void){
     SetDeviceState(BT_POWERON);
 }
 void BtState_SetLinkConnected(void){
-    SrcManager_CheckSource();
-    SetLinkState(LINK_CONNECTED);
+    SetLinkState(LINK_STOP);
+    SrcManager_SourceIn();
 }
 void BtState_SetLinkDisconnected(void){
-    SrcManager_CheckSource();
     SetLinkState(LINK_DISCONNECTED);
+    SrcManager_SourceOut();
 }
 void BtState_EnablePairing(void){
     SetDeviceState(BT_PAIRING);
+}
+void BtState_SetLinkPlay(void){
+    SetLinkState(LINK_PLAY);
+}
+void BtState_SetLinkStop(void){
+    SetLinkState(LINK_STOP);
+}
+void BtState_SetLinkPause(void){
+    SetLinkState(LINK_PAUSE);
 }

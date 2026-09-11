@@ -3,6 +3,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#define TRACKS_PER_PAGE 99
+#define VIRTUAL_TRACK_COUNT 100
+
 typedef struct
 {
     char Path[256];

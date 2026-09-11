@@ -9,13 +9,13 @@
 #include "freertos/task.h"
 #include "esp_random.h"
 
-#include <cdc/cdc_state.h>
 #include <cdc/cdc_protocol.h>
-
 #include <usbPlayer.h>
 #include <usbLibrary.h>
+#include <usbState.h>
 #include <media/mediaOutput.h>
 #include <usbDecoder.h>
+#include <sourceManager/sourceManager.h>
 
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
@@ -33,7 +33,7 @@ static volatile uint8_t requestedHeadTrack = 0;
 static long ResumePosition = -1;
 static uint16_t ResumeTrack = 0;
 
-static const char* TAG = "MEDIA_PLAYER";
+static const char* TAG = "USB_PLAYER";
 
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
@@ -91,7 +91,7 @@ void UsbPlayer_SwitchTrack(uint8_t track)
     requestedHeadTrack = track;
     requestedPage = CurrentPage;
 
-    if(CdcGetUsbRandom()){
+    if(UsbState_GetUsbRandom()){
         if(track > CurrentTrack){
             uint32_t randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
             requestedPage = (randomRealTrack - 1) / TRACKS_PER_PAGE;
@@ -103,7 +103,7 @@ void UsbPlayer_SwitchTrack(uint8_t track)
     }
     else
     {
-        if(track == SWITCH_TRACK_NUMBER)
+        if(track == VIRTUAL_TRACK_COUNT)
             Player_CalcTrackSwitch();
         else
         {
@@ -132,7 +132,7 @@ static bool Player_CalcNextTrack(
     *nextTrack = CurrentTrack;
     *headTrack = 0;
 
-    if(CdcGetUsbRandom())
+    if(UsbState_GetUsbRandom())
     {
         uint16_t randomRealTrack = (esp_random() % trackCount) + 1;
 
@@ -154,7 +154,7 @@ static bool Player_CalcNextTrack(
     {
         *nextPage = CurrentPage + 1;
         *nextTrack = 1;
-        *headTrack = SWITCH_TRACK_NUMBER;
+        *headTrack = VIRTUAL_TRACK_COUNT;
 
         return true;
     }
@@ -213,9 +213,9 @@ static void PlayerTask(void *arg)
         goto error_exit;
 
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
-    CdcPlay();
+    UsbState_Play();
 
-    while(GetCdcState() == CDC_PLAY)
+    while(UsbState_GetState() == USB_PLAY)
     {
         if(playerStopRequested)
         {
@@ -239,7 +239,7 @@ static void PlayerTask(void *arg)
                 goto error_exit;
             if(requestedHeadTrack != CurrentTrack)
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
-            CdcPlay();
+            UsbState_Play();
             continue;
         }
 
@@ -255,7 +255,7 @@ static void PlayerTask(void *arg)
                 uint8_t headTrack;
                 Decoder_Close();
                 Player_CalcNextTrack(&nextPage, &nextTrack, &headTrack);
-                if(headTrack == SWITCH_TRACK_NUMBER)
+                if(headTrack == VIRTUAL_TRACK_COUNT)
                 {
                     CdcProtocol_SendPlayStartPacket(headTrack);
                     vTaskDelay(pdMS_TO_TICKS(100));
@@ -268,7 +268,7 @@ static void PlayerTask(void *arg)
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
-                CdcPlay();
+                UsbState_Play();
                 break;
             }
             case DECODER_ERROR:
@@ -282,7 +282,7 @@ static void PlayerTask(void *arg)
                     &nextPage,
                     &nextTrack,
                     &headTrack);
-                if(headTrack == SWITCH_TRACK_NUMBER)
+                if(headTrack == VIRTUAL_TRACK_COUNT)
                 {
                     CdcProtocol_SendPlayStartPacket(
                         headTrack);
@@ -296,7 +296,7 @@ static void PlayerTask(void *arg)
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
-                CdcPlay();
+                UsbState_Play();
                 continue;
             }
         }
@@ -315,7 +315,8 @@ error_exit:
     TimeBaseSeconds = 0;
     goto common_exit;
 common_exit:
-    CdcStopPlay();
+    if(UsbState_GetState() != USB_NODISK)
+        UsbState_Stop();
     Decoder_Close();
     Output_Stop();
     playerTaskHandle = NULL;
@@ -325,7 +326,7 @@ common_exit:
 }
 
 void UsbPlayer_Stop(void){
-    if(GetCdcState() != CDC_NOCD)
+    if(UsbState_GetState() != USB_NODISK)
         playerStopRequested = true;
 }
 void UsbPlayer_Reset(void)

@@ -3,6 +3,7 @@
 #include <inttypes.h>
 
 #include <usb/usbPlayer.h>
+#include <sourceManager/sourceManager.h>
 
 typedef struct
 {

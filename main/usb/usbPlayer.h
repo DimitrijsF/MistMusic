@@ -3,16 +3,6 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define TRACKS_PER_PAGE 99
-#define SWITCH_TRACK_NUMBER 100
-
-typedef struct
-{
-    uint8_t Minutes;
-    uint8_t Seconds;
-    uint8_t Track;
-} PlayStatus;
-
 void UsbPlayer_SwitchTrack(uint8_t track);
 void UsbPlayer_Play(void);
 void UsbPlayer_Stop(void);

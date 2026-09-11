@@ -11,8 +11,8 @@
 #include "usbStorage.h"
 #include "usb/usbLibrary.h"
 #include <usb/usbPlayer.h>
-#include <cdc/cdc_state.h>
 #include <cdc/cdc_protocol.h>
+#include <usbState.h>
 
 static const char *TAG = "MSC";
 
@@ -35,7 +35,6 @@ static void StorageCallback(const msc_host_event_t *event, void *arg)
             g_DeviceInstalled = false;
             g_DeviceDisconnectRequested = false;
             g_EjectRequested = false;
-            SrcManager_CheckSource();
             ESP_LOGI(TAG,
              "MSC device connected (address=%u)",
              g_DeviceAddress);
@@ -45,6 +44,8 @@ static void StorageCallback(const msc_host_event_t *event, void *arg)
             g_DeviceConnected = false;
             g_DeviceDisconnectRequested = true;
             UsbLibrary_Clear();
+            UsbState_Eject();
+            SrcManager_SourceOut();
             ESP_LOGI(TAG, "MSC device disconnected");
         break;
 
@@ -219,20 +220,20 @@ static void UsbStorageTask(void *arg){
             g_DeviceAddress = 0;
 
             UsbLibrary_Clear();
-            SrcManager_CheckSource();
             ESP_LOGI(TAG, "USB storage disconnected");
         }
         if (g_DeviceConnected && !g_DeviceInstalled)
         {
             g_DeviceInstalled = true;
+            UsbState_Loading();
             UsbPlayer_ResetSavedState();   
             UsbLibrary_Clear();
             UsbStorage_OpenDevice();
-            if (GetCdcState() != CDC_STANDBY)
-                CdcLoadDisk();
+            SrcManager_SourceIn();
             if (g_Device != NULL)
                 UsbStorage_ReadFS();
-            CdcProtocol_CompleteLoad();
+            SrcManager_UsbReady();
+            UsbState_Stop();
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));

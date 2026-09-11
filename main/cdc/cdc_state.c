@@ -12,8 +12,6 @@
 #include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
 
-static bool UsbRandom = false;
-
 static CdcState State = CDC_STANDBY;
 static const char *TAG = "CDC_STATE";
 
@@ -60,7 +58,6 @@ void CdcStandby(void){
 }
 void CdcLoadDisk(void){
     SetCdcState(CDC_LOADING);
-    ProtocolDriveIn();
 }
 void CdcPlay(void){
     SetCdcState(CDC_PLAY);
@@ -75,10 +72,4 @@ void CdcEjectStart(void){
 }
 void CdcNoDisk(void){
     SetCdcState(CDC_NOCD);
-}
-void CdcSetUsbRandom(bool value){
-    UsbRandom = value;
-}
-bool CdcGetUsbRandom(void){
-    return UsbRandom;
 }

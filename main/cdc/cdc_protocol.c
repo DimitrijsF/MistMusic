@@ -126,7 +126,7 @@ void HandlePlayBack(const uint8_t *packet){
 }
 void HandleTrackSelect(const uint8_t *packet){
     uint8_t track = packet[2];
-    
+    SrcManager_SwitchTrack(track);
 }
 void HandleStop(const uint8_t *packet){
     (void)packet;
@@ -145,16 +145,15 @@ void HandlePlayModeRequest(const uint8_t *packet){
             break;
             case STEP2:
                 CdcUart_Send(ProtoStatusSTEP2, sizeof(ProtoStatusSTEP2)); 
-                vTaskDelay(pdMS_TO_TICKS(200));
+                vTaskDelay(pdMS_TO_TICKS(100));
                 CdcUart_Send(ProtoStatusSTEP3, sizeof(ProtoStatusSTEP3)); 
-                vTaskDelay(pdMS_TO_TICKS(200));
+                vTaskDelay(pdMS_TO_TICKS(100));
                 CdcUart_Send(ProtoPreDiskInfo, sizeof(ProtoPreDiskInfo)); 
             break;
             case READY:
                 CdcUart_Send(ProtoStatusReadyToPlay, sizeof(ProtoStatusReadyToPlay));
             break;
-            default:
-            break;
+            default: break;
         }
     }   
     if(state == CDC_STOP)
@@ -225,9 +224,9 @@ static void HandleDBRequest(const uint8_t *packet){
     if(GetCdcState() == CDC_EJECTING && ejectingState == FINISH){
         CdcUart_Send(ProtoStatusDiskInSeq2, sizeof(ProtoStatusDiskInSeq2));
         CdcUart_Send(ProtoStatusDiskInSeq1, sizeof(ProtoStatusDiskInSeq1));
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
         CdcUart_Send(ProtoStatusDiskEjectingSeq, sizeof(ProtoStatusDiskEjectingSeq));
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
         CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk));
         CdcNoDisk();
     }
@@ -280,7 +279,7 @@ static void SendDiskInfo(void){
         .LeadOut1 = 0x05,
         .LeadOut2 = 0x1D,
         .LeadOut3 = 0x40,
-        .Tracks = UsbLibrary_GetVirtualCount(),
+        .Tracks = VIRTUAL_TRACK_COUNT,
         .Unknown = 0x01,
         .Reserved = 0x00
     };

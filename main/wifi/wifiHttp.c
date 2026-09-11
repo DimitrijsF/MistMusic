@@ -4,7 +4,7 @@
 #include "esp_http_server.h"
 
 #include "wifiHttp.h"
-#include <cdc/cdc_state.h>
+#include <usb/usbState.h>
 #include <bluetooth/bm83_protocol.h>
 
 static const char *TAG = "WIFI_HTTP";
@@ -25,7 +25,7 @@ static esp_err_t RootHandler(httpd_req_t *req)
 }
 static esp_err_t StateHandler(httpd_req_t *req)
 {
-    bool random = CdcGetUsbRandom();
+    bool random = UsbState_GetUsbRandom();
 
     char response[32];
 
@@ -69,11 +69,11 @@ static esp_err_t RandomHandler(httpd_req_t *req)
 
     if (strcmp(value, "1") == 0)
     {
-        CdcSetUsbRandom(true);
+        UsbState_SetUsbRandom(true);
     }
     else if (strcmp(value, "0") == 0)
     {
-        CdcSetUsbRandom(false);
+        UsbState_SetUsbRandom(false);
     }
     else
     {
