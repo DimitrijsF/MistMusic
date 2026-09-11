@@ -38,6 +38,7 @@ void SrcManager_SourceIn(void){
             vTaskDelay(pdMS_TO_TICKS(500));
             CdcProtocol_CompleteLoad();
             CdcStopPlay();
+            CurrentPlayer = BT;
         }
     }
     ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
@@ -54,7 +55,10 @@ void SrcManager_SourceOut(void){
     BtLinkState link = BtState_GetLinkState();
     if(usb == USB_NODISK){
         if(link != LINK_DISCONNECTED)
+        {
+            CurrentPlayer = BT;
             BtPlayer_Play();
+        }
         else{
             CdcNoDisk();
         }

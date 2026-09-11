@@ -33,10 +33,13 @@ void BtPlayer_Stop(void){
     if(BtState_GetLinkState() != LINK_PAUSE){
         PlayedSeconds = 0;
         BtState_SetLinkStop();
-        if (timerTaskHandle != NULL)
-        {
+        if (timerTaskHandle != NULL){
             vTaskDelete(timerTaskHandle);
             timerTaskHandle = NULL;
+        }
+        if(playerTaskHandle != NULL){
+            vTaskDelete(playerTaskHandle);
+            playerTaskHandle = NULL;
         }
         BtProto_SendStop();
     }
@@ -66,6 +69,14 @@ static void PlayerTask(void *arg){
     while (BtState_GetLinkState() == LINK_PLAY)
     {
         //playing bt stream
+    }
+    if (timerTaskHandle != NULL){
+        vTaskDelete(timerTaskHandle);
+        timerTaskHandle = NULL;
+    }
+    if(playerTaskHandle != NULL){
+        vTaskDelete(playerTaskHandle);
+        playerTaskHandle = NULL;
     }
 }
 static void PlayerTimerTask(void *arg){
