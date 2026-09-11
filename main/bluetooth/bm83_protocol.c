@@ -23,6 +23,16 @@ static const BM_PACKET ProtoPowerOnRelease = {
     .Data = {0x00, 0x52},
     .DataLength = 2
 };
+static const BM_PACKET ProtoPowerOffPress = {
+    .Command = 0x02,
+    .Data = {0x00, 0x53},
+    .DataLength = 2
+};
+static const BM_PACKET ProtoPowerOffRelease = {
+    .Command = 0x02,
+    .Data = {0x00, 0x54},
+    .DataLength = 2
+};
 static const BM_PACKET ProtoSetPairing = {
     .Command = 0x02,
     .Data = {0x00, 0x5D},
@@ -31,6 +41,31 @@ static const BM_PACKET ProtoSetPairing = {
 static const BM_PACKET ProtoSetATRx = {
     .Command = 0x44,
     .Data = {0x03, 0x01},
+    .DataLength = 2
+};
+static const BM_PACKET ProtoPlay = {
+    .Command = 0x04,
+    .Data = {0x00, 0x05},
+    .DataLength = 2
+};
+static const BM_PACKET ProtoPause = {
+    .Command = 0x04,
+    .Data = {0x00, 0x06},
+    .DataLength = 2
+};
+static const BM_PACKET ProtoStop = {
+    .Command = 0x04,
+    .Data = {0x00, 0x08},
+    .DataLength = 2
+};
+static const BM_PACKET ProtoNextTrack = {
+    .Command = 0x04,
+    .Data = {0x00, 0x09},
+    .DataLength = 2
+};
+static const BM_PACKET ProtoPrevTrack = {
+    .Command = 0x04,
+    .Data = {0x00, 0x0A},
     .DataLength = 2
 };
 #pragma endregion
@@ -82,6 +117,11 @@ static void ProcessStatusEvent(uint8_t cmdData){
             if(BtState_GetLinkState() != LINK_DISCONNECTED)
                 BtState_SetLinkDisconnected();
             break; 
+    /*  case ??: //call incoming
+            break;
+        case ??:  //call ended
+            break;    
+    */
         default: break;
     }
 }
@@ -100,7 +140,26 @@ void BtProto_SendPowerOn(void){
     SendPacket(&ProtoPowerOnPress);
     SendPacket(&ProtoPowerOnRelease);
 }
+void BtProto_SendPowerOff(void){
+    SendPacket(&ProtoPowerOffPress);
+    SendPacket(&ProtoPowerOffRelease);
+}
 void BtProto_SendPairing(void){
     SendPacket(&ProtoSetPairing);
     BtState_EnablePairing();
+}
+void BtProto_SendPlay(void){
+    SendPacket(&ProtoPlay);
+}
+void BtProto_SendStop(void){
+    SendPacket(&ProtoStop);
+}
+void BtProto_SendPause(void){
+    SendPacket(&ProtoPause);
+}
+void BtProto_SendPrevTrack(void){
+    SendPacket(&ProtoPrevTrack);
+}
+void BtProto_SendNextTrack(void){
+    SendPacket(&ProtoNextTrack);
 }

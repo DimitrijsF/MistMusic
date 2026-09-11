@@ -7,12 +7,13 @@
 #include <bm83_state.h>
 #include <sourceManager/sourceManager.h>
 #include <cdc/cdc_protocol.h>
+#include <bm83_protocol.h>
 
 #define MAX_PLAY_SECONDS 60 * 10
+#define BT_CONSTANT_TRACK 10
 
 static const char* TAG = "BT_PLAYER";
 
-static uint8_t CurrentTrack = 10;
 static uint16_t PlayedSeconds = 0;
 static bool IsPlaying = false;
 
@@ -30,37 +31,38 @@ void BtPlayer_Play(void){
 }
 void BtPlayer_Stop(void){
     if(BtState_GetLinkState() != LINK_PAUSE){
+        PlayedSeconds = 0;
         BtState_SetLinkStop();
         if (timerTaskHandle != NULL)
         {
             vTaskDelete(timerTaskHandle);
             timerTaskHandle = NULL;
         }
-        IsPlaying = false;
-        //send bt stop
+        BtProto_SendStop();
     }
+    IsPlaying = false;
 }
 void BtPlayer_Pause(void){
     BtState_SetLinkPause();
-    IsPlaying = false;
+    BtProto_SendPause();
     BtPlayer_Stop();
-    //send bt pause
 }
 void BtPlayer_SwitchTrack(uint8_t track){
-    if(track > CurrentTrack){
-        //send bt next
+    if(track > BT_CONSTANT_TRACK){
+        BtProto_SendNextTrack();
     }
     else{
-        //send bt prev
+        BtProto_SendPrevTrack();
     }
     PlayedSeconds = 0;
 }
 static void PlayerTask(void *arg){
-    CdcProtocol_SendPlayStartPacket(CurrentTrack);
+    CdcProtocol_SendPlayStartPacket(BT_CONSTANT_TRACK);
     BtState_SetLinkPlay();
     IsPlaying = true;
     if(timerTaskHandle == NULL)
         xTaskCreate(PlayerTimerTask, "PlayerTimer", 4096, NULL, 5, &timerTaskHandle);
+    BtProto_SendPlay();
     while (BtState_GetLinkState() == LINK_PLAY)
     {
         //playing bt stream
@@ -77,7 +79,7 @@ static void PlayerTimerTask(void *arg){
             {
                 .Minutes = PlayedSeconds / 60,
                 .Seconds = PlayedSeconds % 60,
-                .Track = CurrentTrack
+                .Track = BT_CONSTANT_TRACK
             };
             CdcProtocol_SendPlayStatus(status);
         }

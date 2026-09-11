@@ -72,24 +72,11 @@ void BtUart_Send(const uint8_t *data, size_t length)
 {
     vTaskDelay(pdMS_TO_TICKS(50));
     uart_write_bytes(BT_UART_PORT, data, length);
-
     char text[128];
     int pos = 0;
-
     for (size_t i = 0; i < length; i++)
-    {
-        pos += snprintf(
-            text + pos,
-            sizeof(text) - pos,
-            "%02X ",
-            data[i]);
-    }
-
-    ESP_LOGI(
-        TAG,
-        "TX (%u): >> %s",
-        length,
-        text);
+        pos += snprintf( text + pos, sizeof(text) - pos, "%02X ", data[i]);
+    ESP_LOGI(TAG, "TX (%u): >> %s", length, text);
 }
 
 static void BtUart_Task(void *arg)
@@ -98,30 +85,14 @@ static void BtUart_Task(void *arg)
 
     while (true)
     {
-        int length =
-            uart_read_bytes(
-                BT_UART_PORT,
-                buffer,
-                sizeof(buffer),
-                pdMS_TO_TICKS(10));
-
+        int length = uart_read_bytes(BT_UART_PORT, buffer, sizeof(buffer), pdMS_TO_TICKS(10));
         if (length > 0)
         {
             char text[256];
             int pos = 0;
             for (int i = 0; i < length; i++)
-            {
-                pos += snprintf(
-                    text + pos,
-                    sizeof(text) - pos,
-                    "%02X ",
-                    buffer[i]);
-            }
-         /*   ESP_LOGI(
-                TAG,
-                "RX (%d): << %s",
-                length,
-                text);*/
+                pos += snprintf(text + pos, sizeof(text) - pos, "%02X ", buffer[i]);
+            ESP_LOGI(TAG, "RX (%d): << %s", length, text);
             BtProto_ProcessPacket(buffer, length);
         }
     }

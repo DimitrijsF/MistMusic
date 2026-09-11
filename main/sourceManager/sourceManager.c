@@ -8,10 +8,8 @@
 #include <usb/usbState.h>
 #include <cdc/cdc_state.h>
 #include <bluetooth/bm83_state.h>
-
 #include <usb/usbPlayer.h>
 #include <bluetooth/bm83_player.h>
-
 #include <cdc/cdc_protocol.h>
 
 static const char *TAG = "SRC_MANAGER";
@@ -67,6 +65,7 @@ void SrcManager_SourceOut(void){
 }
 #pragma endregion
 void SrcManager_Play(void){
+    ESP_LOGI(TAG, "PLAY called");
     if(CurrentPlayer == USB){
         if(UsbState_GetState() != USB_PLAY)
             UsbPlayer_Play();
@@ -89,7 +88,7 @@ void SrcManager_Stop(void){
     }
     if(CurrentPlayer == BT){
         if(BtState_GetLinkState() == LINK_PLAY || BtState_GetLinkState() == LINK_CALL){
-            BtPlayer_Stop();
+            BtPlayer_Pause();
             CdcStopPlay();
         }
         return;
