@@ -12,11 +12,11 @@ typedef enum
     CDC_STOP
 } CdcState;
 
-CdcState GetCdcState(void);
-void CdcBoot(void);
-void CdcStandby(void);
-void CdcLoadDisk(void);
-void CdcPlay(void);
-void CdcStopPlay(void);
-void CdcEjectStart(void);
-void CdcNoDisk(void);
+CdcState CdcState_GetCdcState(void);
+void CdcState_CdcBoot(void);
+void CdcState_CdcStandby(void);
+void CdcState_CdcLoading(void);
+void CdcState_CdcPlay(void);
+void CdcState_CdcStopPlay(void);
+void CdcState_CdcEjectStart(void);
+void CdcState_CdcNoDisk(void);

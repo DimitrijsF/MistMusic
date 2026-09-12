@@ -9,6 +9,7 @@
 #include <cdc/cdc_protocol.h>
 #include <cdc/cdc_uart.h>
 #include <cdc/cdc_state.h>
+
 #include <usb/usbLibrary.h>
 #include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
@@ -113,9 +114,6 @@ void Handle5101(const uint8_t *packet){
     CdcUart_Send(ProtoAnswer5101, sizeof(ProtoAnswer5101)); 
 }
 void HandlePlayBack(const uint8_t *packet){
-    CdcState state = GetCdcState();
-    if(state != CDC_PLAY && state != CDC_STOP)
-        return;
     switch(packet[3])
     {
         case 0x00:
@@ -134,7 +132,7 @@ void HandleStop(const uint8_t *packet){
 }
 void HandlePlayModeRequest(const uint8_t *packet){
     (void)packet;
-    CdcState state = GetCdcState();
+    CdcState state = CdcState_GetCdcState();
     if(state == CDC_LOADING){
         switch (loadingState)
         {
@@ -172,12 +170,11 @@ void CdcProtocol_CompleteLoad(void){
     SetLoadingState(READY);
     SetEjectingState(INIT);
     CheckSavedTrack();
-    CdcStopPlay();
 }
 void HandleStatus(const uint8_t *packet)
 {
     (void)packet;
-    switch(GetCdcState())
+    switch(CdcState_GetCdcState())
     {
         case CDC_NOCD:
             CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk)); 
@@ -194,7 +191,7 @@ void HandleStatus(const uint8_t *packet)
 }
 void HandleLoadingState(const uint8_t *packet){
     (void)packet;
-    CdcState state = GetCdcState();
+    CdcState state = CdcState_GetCdcState();
     if(state == CDC_LOADING){
         if(loadingState != READY)
             CdcUart_Send(ProtoPlayAnswerLoad, sizeof(ProtoPlayAnswerLoad));
@@ -204,31 +201,27 @@ void HandleLoadingState(const uint8_t *packet){
     else if(state == CDC_STOP)
         CdcUart_Send(ProtoPlayAnswerReady, sizeof(ProtoPlayAnswerReady));
     else if(state == CDC_PLAY)
-        UsbPlayer_SendCurrentStatus();
+        SrcManager_SendCurrentStatus();
 }
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
-    UsbPlayer_SaveCurrentTrackPage();
-    UsbPlayer_Stop();
-    CdcStopPlay();
-    CdcEjectStart();
+    
     CdcUart_Send(ProtoStatusEjecting1, sizeof(ProtoStatusEjecting1));
     CdcUart_Send(ProtoStatusEjecting2, sizeof(ProtoStatusEjecting2));
     SetEjectingState(FINISH);
     SetLoadingState(STEP0);
-    UsbStorageEject();
-    UsbPlayer_Reset();
+    
 }
 static void HandleDBRequest(const uint8_t *packet){
     (void)packet;
-    if(GetCdcState() == CDC_EJECTING && ejectingState == FINISH){
+    if(CdcState_GetCdcState() == CDC_EJECTING && ejectingState == FINISH){
         CdcUart_Send(ProtoStatusDiskInSeq2, sizeof(ProtoStatusDiskInSeq2));
         CdcUart_Send(ProtoStatusDiskInSeq1, sizeof(ProtoStatusDiskInSeq1));
         vTaskDelay(pdMS_TO_TICKS(100));
         CdcUart_Send(ProtoStatusDiskEjectingSeq, sizeof(ProtoStatusDiskEjectingSeq));
         vTaskDelay(pdMS_TO_TICKS(100));
         CdcUart_Send(ProtoStatusNoDisk, sizeof(ProtoStatusNoDisk));
-        CdcNoDisk();
+        SrcManager_CompleteEject();
     }
 }
 #pragma endregion
@@ -316,19 +309,16 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
         if (packet[i] != 0xFF)
             allFF = false;
     }
-
     if (allZero)
     {
         ESP_LOGD(TAG, "Ignore: all zero");
         return;
     }
-
     if (allFF)
     {
         ESP_LOGD(TAG, "Ignore: all AA");
         return;
     }
-
     uint8_t reply[16];
 
     if (length == 4 && packet[0] == 0x23)
@@ -341,11 +331,9 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
             packet[3],
             packet[0]
         };
-
         CdcUart_Send(reply, sizeof(reply));
         return;
     }
-    
     if(length == 3 && packet[0] == 0x32){
         const uint8_t reply[] =
         {
@@ -357,21 +345,16 @@ void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length)
         CdcUart_Send(reply, sizeof(reply));
         return;
     }
-
     reply[0] = 0xE0 | length;
-
     if (packet[0] == 0xDB)
     {
         memcpy(&reply[1], &packet[1], length - 1);
-
         reply[length] = 0xDB;
     }
     else
     {
         for (uint8_t i = 0; i < length; i++)
-        {
             reply[i + 1] = packet[length - 1 - i];
-        }
     }
     CdcUart_Send(reply, length + 1);
 }

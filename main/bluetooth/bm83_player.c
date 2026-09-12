@@ -85,14 +85,17 @@ static void PlayerTimerTask(void *arg){
         if(IsPlaying){
             PlayedSeconds++;
             if(PlayedSeconds > MAX_PLAY_SECONDS)
-                PlayedSeconds = 0;
-            PlayStatus status =
-            {
-                .Minutes = PlayedSeconds / 60,
-                .Seconds = PlayedSeconds % 60,
-                .Track = BT_CONSTANT_TRACK
-            };
-            CdcProtocol_SendPlayStatus(status);
+                PlayedSeconds = 0;       
+            BtPlayer_SendCurrentStatus();  
         }
     }
+}
+void BtPlayer_SendCurrentStatus(void){
+    PlayStatus status =
+    {
+        .Minutes = PlayedSeconds / 60,
+        .Seconds = PlayedSeconds % 60,
+        .Track = BT_CONSTANT_TRACK
+    };
+    CdcProtocol_SendPlayStatus(status);
 }

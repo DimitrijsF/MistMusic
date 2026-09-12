@@ -18,6 +18,9 @@ ActivePlayer SrcManager_GetCurrentPlayer(void);
 void SrcManager_SourceIn(void);
 void SrcManager_UsbReady(void);
 void SrcManager_SourceOut(void);
+void SrcManager_ProcessEject(void);
+void SrcManager_CompleteEject(void);
+void SrcManager_SendCurrentStatus(void);
 
 void SrcManager_Play(void);
 void SrcManager_Stop(void);

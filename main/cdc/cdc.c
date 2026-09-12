@@ -18,16 +18,16 @@ static bool IsHeadEnabled(void);
 static void CdcStateTask(void *arg){
     while (true)
     {  
-        if (GetCdcState() == CDC_STANDBY)
+        if (CdcState_GetCdcState() == CDC_STANDBY)
         {
             if(IsHeadEnabled()){
-                CdcBoot();
+                CdcState_CdcBoot();
                 WifiService_Start();
             }
         }
         else{
             if(!IsHeadEnabled()){
-                CdcStandby();
+                CdcState_CdcStandby();
                 WifiService_Stop();
             }
         }

@@ -17,7 +17,7 @@ static const char *TAG = "CDC_STATE";
 
 static const char *StateToString(CdcState state);
 
-CdcState GetCdcState(void){
+CdcState CdcState_GetCdcState(void){
     return State;
 }
 static void SetCdcState(CdcState state){
@@ -43,7 +43,7 @@ static const char *StateToString(CdcState state)
         default: return "UNKNOWN";
     }
 }
-void CdcBoot(void){
+void CdcState_CdcBoot(void){
     SetCdcState(CDC_BOOT);
     CdcUart_Init();
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -52,24 +52,24 @@ void CdcBoot(void){
     else
         SetCdcState(CDC_NOCD);
 }
-void CdcStandby(void){
+void CdcState_CdcStandby(void){
     SetCdcState(CDC_STANDBY);
     UartShutDown();
 }
-void CdcLoadDisk(void){
+void CdcState_CdcLoading(void){
     SetCdcState(CDC_LOADING);
 }
-void CdcPlay(void){
+void CdcState_CdcPlay(void){
     SetCdcState(CDC_PLAY);
 }
-void CdcStopPlay(void){
+void CdcState_CdcStopPlay(void){
     if(State != CDC_NOCD)
         SetCdcState(CDC_STOP);
     SetCdcState(CDC_STOP);
 }
-void CdcEjectStart(void){
+void CdcState_CdcEjectStart(void){
     SetCdcState(CDC_EJECTING);
 }
-void CdcNoDisk(void){
+void CdcState_CdcNoDisk(void){
     SetCdcState(CDC_NOCD);
 }
