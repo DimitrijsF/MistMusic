@@ -5,6 +5,7 @@
 
 #include <bm83_state.h>
 #include <bm83_protocol.h>
+#include <cdc/cdc_state.h>
 
 #include <sourceManager/sourceManager.h>
 
@@ -52,7 +53,7 @@ static void SetDeviceState(BtState state){
 }
 static void SetLinkState(BtLinkState state){
     ESP_LOGI(TAG,
-         "Ejecting state %s -> %s",
+         "BT Link state %s -> %s",
          LinkStateToString(LinkState),
          LinkStateToString(state));
     LinkState = state;
@@ -62,6 +63,8 @@ bool BtState_IsInitialized(void){
 }
 void BtState_SetInitDone(void){
     IsInitialized = true;
+    if(CdcState_GetCdcState() == CDC_STANDBY)
+        BtProto_SendPowerOff();
 }
 void BtState_Enable(void){
     SetDeviceState(BT_STARTING);
