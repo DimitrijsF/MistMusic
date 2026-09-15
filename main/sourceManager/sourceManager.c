@@ -7,6 +7,7 @@
 #include <sourceManager.h>
 #include <usb/usbState.h>
 #include <usb/usbStorage.h>
+#include <usb/usbLibrary.h>
 #include <cdc/cdc_state.h>
 #include <bluetooth/bm83_state.h>
 #include <usb/usbPlayer.h>
@@ -49,22 +50,31 @@ void SrcManager_UsbReady(void){
         CdcProtocol_CompleteLoad();
         CdcState_CdcStopPlay();
     }
+    if(UsbLibrary_GetCount() > 0){
+        CurrentPlayer = USB;
+        BtPlayer_Stop();
+        BtState_SetOff();
+        if(CdcState_GetCdcState() == CDC_PLAY){
+            BtPlayer_Stop();
+            UsbPlayer_Play();
+        }
+    }
+    ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
 }
 void SrcManager_SourceOut(void){
     ESP_LOGI(TAG, "Source OUT");
-    UsbState usb = UsbState_GetState();
-    BtLinkState link = BtState_GetLinkState();
-    if(usb == USB_NODISK){
-        if(link != LINK_DISCONNECTED)
-        {
-            CurrentPlayer = BT;
-            BtPlayer_Play();
-        }
-        else
-            CdcState_CdcNoDisk();
+    if(UsbState_GetState() == USB_NODISK){
+        CdcState_CdcNoDisk();
+        BtState_Enable();
     }
     else
-        UsbPlayer_Play();
+    {
+        CurrentPlayer = USB;
+        if(CdcState_GetCdcState() == CDC_PLAY)
+            UsbPlayer_Play();
+        else 
+            UsbPlayer_Stop();
+    }
     ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
 }
 void SrcManager_ProcessEject(void){
@@ -95,6 +105,13 @@ void SrcManager_SendCurrentStatus(void){
         UsbPlayer_SendCurrentStatus();
     else
         BtPlayer_SendCurrentStatus();
+}
+void SrcManager_CheckSource(){
+    if(CdcState_GetCdcState() != CDC_STANDBY){
+        if(UsbState_GetState() == USB_NODISK){
+            BtState_Enable();
+        }
+    }
 }
 #pragma endregion
 void SrcManager_Play(void){

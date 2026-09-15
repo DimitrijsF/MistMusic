@@ -14,7 +14,7 @@ static bool IsEmpty = true;
 static uint8_t SavedTrack = 0;
 static uint8_t SavedPage = 0;
 
-static const char* TAG = "MEDIA_LIBRARY";
+static const char* TAG = "USB_LIBRARY";
 static FILE *g_IndexFile = NULL;
 
 static UsbTrack g_CurrentTrack;

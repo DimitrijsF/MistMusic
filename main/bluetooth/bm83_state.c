@@ -70,6 +70,10 @@ void BtState_Enable(void){
 void BtState_SetOn(void){
     SetDeviceState(BT_POWERON);
 }
+void BtState_SetOff(void){
+    BtProto_SendPowerOff();
+    SetDeviceState(BT_POWEROFF);
+}
 void BtState_SetLinkConnected(void){
     SetLinkState(LINK_STOP);
     SrcManager_SourceIn();

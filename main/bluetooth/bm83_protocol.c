@@ -121,10 +121,20 @@ static void ProcessStatusEvent(uint8_t cmdData){
         default: break;
     }
 }
+static void ProcessMusicStatus(uint8_t cmdData){
+    switch (cmdData) //for now ignoring all packets to protect cd30mp3 from crashing with cd error
+    {
+        case 0x00: //stop
+            break;
+        case 0x01: //play
+            break;
+    }
+}
 void BtProto_ProcessPacket(const uint8_t *packet, uint8_t length){
     uint8_t eventId = packet[3];
     switch (eventId){
         case 0x01: ProcessStatusEvent(packet[4]); break;
+        case 0x1B: if(packet[4] == 0x04) ProcessMusicStatus(packet[5]); break;
     }
 }
 void BtProto_SendPowerOn(void){

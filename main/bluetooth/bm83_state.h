@@ -22,6 +22,7 @@ bool BtState_IsInitialized(void);
 void BtState_SetInitDone(void);
 void BtState_Enable(void);
 void BtState_SetOn(void);
+void BtState_SetOff(void);
 void BtState_EnablePairing(void);
 
 void BtState_SetLinkConnected(void);
