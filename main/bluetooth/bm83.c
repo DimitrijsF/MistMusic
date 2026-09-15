@@ -9,5 +9,4 @@
 void BT_Init(void){
     BtUart_Init();
     vTaskDelay(pdMS_TO_TICKS(500));
-    BtState_Enable();
 }

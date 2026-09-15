@@ -2,6 +2,8 @@
 
 #include <cdc/cdc_uart.h>
 #include <cdc/cdc_state.h>
+#include <bluetooth/bm83_state.h>
+#include <bluetooth/bm83_protocol.h>
 
 #include <wifi/wifiService.h>
 
@@ -23,12 +25,14 @@ static void CdcStateTask(void *arg){
             if(IsHeadEnabled()){
                 CdcState_CdcBoot();
                 WifiService_Start();
+                BtState_Enable();
             }
         }
         else{
             if(!IsHeadEnabled()){
                 CdcState_CdcStandby();
                 WifiService_Stop();
+                BtProto_SendPowerOff();
             }
         }
 

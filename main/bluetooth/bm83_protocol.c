@@ -72,9 +72,10 @@ static const BM_PACKET ProtoPrevTrack = {
 static uint8_t CalculateChecksum(const uint8_t* data, size_t length)
 {
     uint16_t sum = 0;
-    for (size_t i = 0; i < length; i++)
+    for(size_t i = 0; i < length; i++)
         sum += data[i];
-    return (uint8_t)(0x100 - (sum & 0xFF));
+
+    return (uint8_t)(0x1AA - sum);
 }
 static BM_FRAME BuildPacket(const BM_PACKET* packet)
 {
@@ -90,7 +91,7 @@ static BM_FRAME BuildPacket(const BM_PACKET* packet)
     frame.Length++;
     return frame;
 }
-static void SendPacket(BM_PACKET* packet){
+static void SendPacket(const BM_PACKET* packet){
     BM_FRAME frame = BuildPacket(packet);
     BtUart_Send(frame.Data, frame.Length);
 }
@@ -117,31 +118,23 @@ static void ProcessStatusEvent(uint8_t cmdData){
             if(BtState_GetLinkState() != LINK_DISCONNECTED)
                 BtState_SetLinkDisconnected();
             break; 
-    /*  case ??: //call incoming
-            break;
-        case ??:  //call ended
-            break;    
-    */
         default: break;
     }
-}
-static void ProcessCallEvents(uint8_t cmdData){
-
 }
 void BtProto_ProcessPacket(const uint8_t *packet, uint8_t length){
     uint8_t eventId = packet[3];
     switch (eventId){
         case 0x01: ProcessStatusEvent(packet[4]); break;
-        case 0x02: ProcessCallEvents(packet[4]); break;
     }
 }
 void BtProto_SendPowerOn(void){
-    vTaskDelay(pdMS_TO_TICKS(5000));
     SendPacket(&ProtoPowerOnPress);
+    vTaskDelay(pdMS_TO_TICKS(20));
     SendPacket(&ProtoPowerOnRelease);
 }
 void BtProto_SendPowerOff(void){
     SendPacket(&ProtoPowerOffPress);
+    vTaskDelay(pdMS_TO_TICKS(20));
     SendPacket(&ProtoPowerOffRelease);
 }
 void BtProto_SendPairing(void){

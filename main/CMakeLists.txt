@@ -10,6 +10,7 @@ idf_component_register(
         "usb/usbState.c"
         
         "media/mediaOutput.c"
+        "media/mediaInput.c"
 
         "cdc/cdc_protocol.c"
         "cdc/cdc_state.c"

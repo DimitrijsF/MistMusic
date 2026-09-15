@@ -40,7 +40,6 @@ static const char *LinkStateToString(BtLinkState state)
         case LINK_STOP: return "LINK_STOP";
         case LINK_PLAY: return "LINK_PLAY";
         case LINK_PAUSE: return "LINK_PAUSE";
-        case LINK_CALL: return "LINK_CALL";
         default: return "UNKNOWN";
     }
 }
@@ -63,8 +62,6 @@ bool BtState_IsInitialized(void){
 }
 void BtState_SetInitDone(void){
     IsInitialized = true;
-    if(CdcState_GetCdcState() == CDC_STANDBY)
-        BtProto_SendPowerOff();
 }
 void BtState_Enable(void){
     SetDeviceState(BT_STARTING);

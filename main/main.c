@@ -6,6 +6,7 @@
 #include <usb/usbStorage.h>
 #include <cdc/cdc.h>
 #include <media/mediaOutput.h>
+#include <media/mediaInput.h>
 #include <bluetooth/bm83.h>
 #include <wifi/wifiService.h>
 
@@ -16,6 +17,7 @@ void app_main(void)
     UsbHost_Init();
     UsbStorage_Init();
     Output_Init();
+    Input_Init();
     BT_Init();
     while (1)
     {

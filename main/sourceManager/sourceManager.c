@@ -122,7 +122,7 @@ void SrcManager_Stop(void){
         return;
     }
     if(CurrentPlayer == BT){
-        if(BtState_GetLinkState() == LINK_PLAY || BtState_GetLinkState() == LINK_CALL){
+        if(BtState_GetLinkState() == LINK_PLAY){
             BtPlayer_Pause();
             CdcState_CdcStopPlay();
         }

@@ -9,8 +9,8 @@
 static const char *TAG = "BT_UART";
 
 #define BT_UART_PORT      UART_NUM_2
-#define BT_UART_TX_PIN    GPIO_NUM_35
-#define BT_UART_RX_PIN    GPIO_NUM_36
+#define BT_UART_TX_PIN    GPIO_NUM_36
+#define BT_UART_RX_PIN    GPIO_NUM_35
 
 #define BT_UART_BAUDRATE  115200
 
@@ -70,7 +70,7 @@ esp_err_t BtUart_Init(void)
 
 void BtUart_Send(const uint8_t *data, size_t length)
 {
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(10));
     uart_write_bytes(BT_UART_PORT, data, length);
     char text[128];
     int pos = 0;

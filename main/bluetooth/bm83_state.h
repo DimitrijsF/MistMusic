@@ -13,8 +13,7 @@ typedef enum{
     LINK_DISCONNECTED,
     LINK_STOP,
     LINK_PLAY,
-    LINK_PAUSE,
-    LINK_CALL
+    LINK_PAUSE
 } BtLinkState;
 
 BtLinkState BtState_GetLinkState(void);

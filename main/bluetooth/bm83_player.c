@@ -9,8 +9,14 @@
 #include <cdc/cdc_protocol.h>
 #include <bm83_protocol.h>
 
+#include <media/mediaInput.h>
+#include <media/mediaOutput.h>
+
 #define MAX_PLAY_SECONDS 60 * 10
 #define BT_CONSTANT_TRACK 10
+#define AUDIO_BUFFER_SAMPLES 1024
+
+static int16_t AudioBuffer[AUDIO_BUFFER_SAMPLES];
 
 static const char* TAG = "BT_PLAYER";
 
@@ -43,6 +49,8 @@ void BtPlayer_Stop(void){
         }
         BtProto_SendStop();
     }
+    Input_Stop();
+    Output_Stop();
     IsPlaying = false;
 }
 void BtPlayer_Pause(void){
@@ -68,16 +76,26 @@ static void PlayerTask(void *arg){
     BtProto_SendPlay();
     while (BtState_GetLinkState() == LINK_PLAY)
     {
-        //playing bt stream
+        if(!Input_IsStarted()){
+            if(!Input_Start()){
+                BtState_SetLinkStop();
+                break;
+            }
+        }         
+        if(!Output_IsStarted()){
+            if(!Output_Start()){
+                BtState_SetLinkStop();
+                break;
+            }
+        }
+        size_t samplesRead = Input_Read(AudioBuffer, AUDIO_BUFFER_SAMPLES);
+
+        if(samplesRead == 0)
+            continue;
+
+        Output_Write(AudioBuffer, samplesRead);
     }
-    if (timerTaskHandle != NULL){
-        vTaskDelete(timerTaskHandle);
-        timerTaskHandle = NULL;
-    }
-    if(playerTaskHandle != NULL){
-        vTaskDelete(playerTaskHandle);
-        playerTaskHandle = NULL;
-    }
+    BtPlayer_Stop();
 }
 static void PlayerTimerTask(void *arg){
     while(true){
