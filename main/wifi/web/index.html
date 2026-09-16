@@ -42,8 +42,6 @@
 
     <h1>MistMusic</h1>
 
-    <button onclick="enablePairing()">Enable Pairing</button>
-
     <label>
         <input type="checkbox" id="randomPlayback" onchange="randomChanged()">
         Random Playback
@@ -70,14 +68,6 @@
                     console.log('Failed to update random playback:', error);
                 });
         }
-
-        function enablePairing() {
-            fetch('/pair')
-                .catch(error => {
-                    console.log('Failed to enable pairing:', error);
-                });
-        }
-
         loadState();
     </script>
 

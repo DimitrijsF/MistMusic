@@ -5,7 +5,6 @@
 
 #include "wifiHttp.h"
 #include <cdc/cdc_state.h>
-#include <bluetooth/bm83_protocol.h>
 
 static const char *TAG = "WIFI_HTTP";
 
@@ -88,15 +87,6 @@ static esp_err_t RandomHandler(httpd_req_t *req)
     httpd_resp_sendstr(req, "OK");
     return ESP_OK;
 }
-static esp_err_t PairHandler(httpd_req_t *req)
-{
-    BtProto_SendPairing();
-
-    httpd_resp_set_type(req, "text/plain");
-    httpd_resp_sendstr(req, "OK");
-
-    return ESP_OK;
-}
 void WifiHttp_Start(void)
 {
     if (s_httpServer != NULL)
@@ -133,15 +123,6 @@ void WifiHttp_Start(void)
         .user_ctx = NULL
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(s_httpServer, &random));
-
-    httpd_uri_t pair = {
-        .uri = "/pair",
-        .method = HTTP_GET,
-        .handler = PairHandler,
-        .user_ctx = NULL
-    };
-
-    ESP_ERROR_CHECK(httpd_register_uri_handler(s_httpServer, &pair));
     
     ESP_LOGI(TAG, "HTTP server started");
 }
