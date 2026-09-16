@@ -3,6 +3,8 @@
 #include <cdc/cdc_uart.h>
 #include <cdc/cdc_state.h>
 
+#include <wifi/wifiService.h>
+
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -20,11 +22,13 @@ static void CdcStateTask(void *arg){
         {
             if(IsHeadEnabled()){
                 CdcBoot();
+                WifiService_Start();
             }
         }
         else{
             if(!IsHeadEnabled()){
                 CdcStandby();
+                WifiService_Stop();
             }
         }
 

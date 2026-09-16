@@ -15,6 +15,14 @@ idf_component_register(
         "cdc/cdc_uart.c"     
         "cdc/cdc.c"
 
+        "bluetooth/bm83.c"
+        "bluetooth/bm83_uart.c"
+        "bluetooth/bm83_protocol.c"
+        "bluetooth/bm83_state.c"
+
+        "wifi/wifiService.c"
+        "wifi/wifiHttp.c"
+
         "components/mp3dec.c"
         "components/mp3tabs.c"
 
@@ -31,13 +39,17 @@ idf_component_register(
         "components/real/stproc.c"
         "components/real/subband.c"
         "components/real/trigtabs.c"
-
-               
+    
     INCLUDE_DIRS
         "."
         "usb"
         "media"
         "cdc"
+        "bluetooth"
+        "wifi"
         "components/pub"
         "components/real"
+
+    EMBED_TXTFILES
+        "wifi/web/index.html"
 )
