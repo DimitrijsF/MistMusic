@@ -8,6 +8,10 @@
 
 #include <mediaInput.h>
 
+#define INPUT_READ_SAMPLES 256
+#define INPUT_READ_TIMEOUT_MS 20
+static int32_t InputBuffer[INPUT_READ_SAMPLES];
+
 static const char *TAG = "MEDIA_INPUT";
 
 static i2s_chan_handle_t InputChannel = NULL;
@@ -17,6 +21,8 @@ static bool IsStarted = false;
 static const gpio_num_t I2S_LRCK_GPIO = GPIO_NUM_40;
 static const gpio_num_t I2S_BCK_GPIO  = GPIO_NUM_41;
 static const gpio_num_t I2S_DATA_GPIO = GPIO_NUM_42;
+
+static volatile bool StopRequested = false;
 
 bool Input_Init(void){
     if(IsInitialized)
@@ -66,7 +72,7 @@ bool Input_Init(void){
     stdConfig.slot_cfg.slot_bit_width =
         I2S_SLOT_BIT_WIDTH_32BIT;
 
-    stdConfig.slot_cfg.bit_shift = false;
+    stdConfig.slot_cfg.bit_shift = true;
     stdConfig.slot_cfg.left_align = false;
     stdConfig.slot_cfg.ws_pol = true;
     stdConfig.slot_cfg.ws_width = 32;
@@ -97,6 +103,7 @@ bool Input_Start(void){
         return false;
     if(IsStarted)
         return true;
+    StopRequested = false;
     if(i2s_channel_enable(InputChannel) != ESP_OK)
         return false;
     IsStarted = true;
@@ -106,32 +113,50 @@ bool Input_Start(void){
 void Input_Stop(void){
     if(!IsStarted)
         return;
-    i2s_channel_disable(InputChannel);
-    IsStarted = false;
-    ESP_LOGI(TAG, "I2S input stopped");
+    StopRequested = true;
+    ESP_LOGI(TAG, "I2S input stop requested");
 }
-size_t Input_Read(int16_t *samples, size_t sampleCount){
-    if(!IsStarted || samples == NULL || sampleCount == 0)
+size_t Input_Read(int16_t *samples, size_t sampleCount)
+{
+    if (!IsStarted || samples == NULL || sampleCount == 0)
         return 0;
 
+    if (sampleCount > INPUT_READ_SAMPLES)
+        sampleCount = INPUT_READ_SAMPLES;
+
     size_t bytesRead = 0;
+
     esp_err_t err =
         i2s_channel_read(
             InputChannel,
-            samples,
-            sampleCount * sizeof(int16_t),
+            InputBuffer,
+            sampleCount * sizeof(int32_t),
             &bytesRead,
             portMAX_DELAY);
-    if(err != ESP_OK)
+
+    if (StopRequested)
     {
-        ESP_LOGE(
-            TAG,
+        i2s_channel_disable(InputChannel);
+
+        IsStarted = false;
+        StopRequested = false;
+
+        ESP_LOGI(TAG, "I2S input stopped");
+
+        return 0;
+    }
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG,
             "I2S read failed: %s",
             esp_err_to_name(err));
 
         return 0;
     }
-    return bytesRead / sizeof(int16_t);
+    size_t samplesRead = bytesRead / sizeof(int32_t);
+    for (size_t i = 0; i < samplesRead; i++)
+        samples[i] = (int16_t)(InputBuffer[i] >> 16);
+    return samplesRead;
 }
 bool Input_IsStarted(void){
     return IsStarted;

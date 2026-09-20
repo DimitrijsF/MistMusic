@@ -206,6 +206,7 @@ void HandleLoadingState(const uint8_t *packet){
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
     SrcManager_Stop();
+    SrcManager_ProcessEject();
     CdcUart_Send(ProtoStatusEjecting1, sizeof(ProtoStatusEjecting1));
     CdcUart_Send(ProtoStatusEjecting2, sizeof(ProtoStatusEjecting2));
     SetEjectingState(FINISH);

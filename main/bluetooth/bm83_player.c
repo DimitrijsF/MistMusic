@@ -43,15 +43,18 @@ void BtPlayer_Stop(void){
             vTaskDelete(timerTaskHandle);
             timerTaskHandle = NULL;
         }
-        if(playerTaskHandle != NULL){
-            vTaskDelete(playerTaskHandle);
-            playerTaskHandle = NULL;
-        }
-        BtProto_SendStop();
+        
     }
     IsPlaying = false;
+    ESP_LOGI(TAG, "STOP: before Input_Stop");
     Input_Stop();
+    ESP_LOGI(TAG, "STOP: after Input_Stop");
+    ESP_LOGI(TAG, "STOP: before BtProto_SendPause");
+    BtProto_SendPause();
+    ESP_LOGI(TAG, "STOP: after BtProto_SendPause");
+    ESP_LOGI(TAG, "STOP: before Output_Stop");
     Output_Stop();
+    ESP_LOGI(TAG, "STOP: after Output_Stop");
 }
 void BtPlayer_Pause(void){
     BtState_SetLinkPause();
@@ -65,6 +68,7 @@ void BtPlayer_SwitchTrack(uint8_t track){
     else{
         BtProto_SendPrevTrack();
     }
+    CdcProtocol_SendPlayStartPacket(track);
     PlayedSeconds = 0;
 }
 static void PlayerTask(void *arg){
@@ -101,7 +105,11 @@ static void PlayerTask(void *arg){
 
         Output_Write(AudioBuffer, samplesRead);
     }
-    BtPlayer_Stop();
+    if(BtState_GetLinkState() == LINK_PLAY)
+        BtPlayer_Stop();
+
+    playerTaskHandle = NULL;
+    vTaskDelete(NULL);
 }
 static void PlayerTimerTask(void *arg){
     while(true){

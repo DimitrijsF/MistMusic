@@ -46,15 +46,22 @@ void SrcManager_SourceIn(void){
     ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
 }
 void SrcManager_UsbReady(void){
+    ESP_LOGI(TAG, "cdc state on usb ready %d", CdcState_GetCdcState());
     if(CdcState_GetCdcState() == CDC_LOADING){
         CdcProtocol_CompleteLoad();
         CdcState_CdcStopPlay();
     }
     if(UsbLibrary_GetCount() > 0){
+        ESP_LOGI(TAG, "Usb ready");
         CurrentPlayer = USB;
+        ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
         BtPlayer_Stop();
+        ESP_LOGI(TAG, "bt player stopped");
         BtState_SetOff();
+        ESP_LOGI(TAG, "bt state off");
+        ESP_LOGI(TAG, "cdc state %d", CdcState_GetCdcState());
         if(CdcState_GetCdcState() == CDC_PLAY){
+            ESP_LOGI(TAG, "cdc state is play, starting usb player");
             UsbPlayer_Play();
         }
     }
@@ -77,23 +84,23 @@ void SrcManager_SourceOut(void){
     ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
 }
 void SrcManager_ProcessEject(void){
+    ESP_LOGI(TAG, "EJECT called");
+    CdcState_CdcEjectStart();
     if(UsbState_GetState() != USB_NODISK){
         UsbPlayer_SaveCurrentTrackPage();
-        UsbPlayer_Stop();
-        CdcState_CdcStopPlay();    
+        UsbPlayer_Stop(); 
         UsbStorageEject();
         UsbPlayer_Reset();
     }
     if(BtState_GetLinkState() != LINK_DISCONNECTED){
         BtPlayer_Stop();
     }
-    CdcState_CdcEjectStart();
 }
 void SrcManager_CompleteEject(void){
     UsbState_Eject();
     CdcState_CdcNoDisk();
     if(BtState_GetLinkState() != LINK_DISCONNECTED){
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        vTaskDelay(pdMS_TO_TICKS(5000));
         SrcManager_SourceIn();
     }
     else
@@ -120,29 +127,24 @@ void SrcManager_Play(void){
     if(CurrentPlayer == USB){
         if(usb == USB_STOP || usb == USB_PLAY)
             UsbPlayer_Play();
-        return;
     }
-    if(CurrentPlayer == BT){
+    else if(CurrentPlayer == BT){
         if(link == LINK_STOP)
-            BtPlayer_Play();
-        return;
+            BtPlayer_Play();        
     }
     CdcState_CdcPlay();
 }
 void SrcManager_Stop(void){
     ESP_LOGI(TAG, "STOP called");
-    ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
     if(CurrentPlayer == USB){
         if(CdcState_GetCdcState() == CDC_PLAY){
             UsbPlayer_Stop();         
         }
-        return;
     }
-    if(CurrentPlayer == BT){
+    else if(CurrentPlayer == BT){
         if(BtState_GetLinkState() == LINK_PLAY){
             BtPlayer_Stop();
         }
-        return;
     }
     CdcState_CdcStopPlay();
 }
