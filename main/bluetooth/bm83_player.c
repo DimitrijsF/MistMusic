@@ -77,29 +77,38 @@ static void PlayerTask(void *arg){
     IsPlaying = true;
     if(timerTaskHandle == NULL)
         xTaskCreate(PlayerTimerTask, "PlayerTimer", 4096, NULL, 5, &timerTaskHandle);
-    BtProto_SendPlay();
+    
     MediaOutputFormat format = {
         .SampleRate = 44100,
         .Channels = 2,
         .Bits = 16
     };
     Output_SetFormat(format);
+    if(!Input_IsStarted()){
+        if(!Input_Start()){
+            ESP_LOGE(TAG, "Failed to start I2S input");
+            BtState_SetLinkStop();
+            IsPlaying = false;
+            playerTaskHandle = NULL;
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+    if(!Output_IsStarted()){
+        if(!Output_Start()){
+            ESP_LOGE(TAG, "Failed to start audio output");
+            BtState_SetLinkStop();
+            IsPlaying = false;
+            Input_Stop();
+            playerTaskHandle = NULL;
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+    BtProto_SendPlay();
     while (BtState_GetLinkState() == LINK_PLAY)
     {
-        if(!Input_IsStarted()){
-            if(!Input_Start()){
-                BtState_SetLinkStop();
-                break;
-            }
-        }         
-        if(!Output_IsStarted()){
-            if(!Output_Start()){
-                BtState_SetLinkStop();
-                break;
-            }
-        }
         size_t samplesRead = Input_Read(AudioBuffer, AUDIO_BUFFER_SAMPLES);
-
         if(samplesRead == 0)
             continue;
 

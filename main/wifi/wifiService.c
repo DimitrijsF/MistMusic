@@ -52,7 +52,7 @@ void WifiService_Init(void)
             .ssid_len = strlen("MistMusic"),
             .channel = 1,
             .password = "password", //change before flash
-            .max_connection = 1,
+            .max_connection = 5,
             .authmode = WIFI_AUTH_WPA2_PSK
         }
     };

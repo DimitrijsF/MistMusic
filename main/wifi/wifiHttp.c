@@ -16,6 +16,7 @@ extern const uint8_t index_html_end[]   asm("_binary_index_html_end");
 
 static esp_err_t RootHandler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "GET /");
     const size_t length = index_html_end - index_html_start;
 
     httpd_resp_set_type(req, "text/html");
@@ -25,6 +26,8 @@ static esp_err_t RootHandler(httpd_req_t *req)
 }
 static esp_err_t StateHandler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "GET /state");
+
     bool random = UsbState_GetUsbRandom();
 
     char response[32];
@@ -103,6 +106,7 @@ void WifiHttp_Start(void)
         return;
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.task_priority = 7;
 
     ESP_ERROR_CHECK(
         httpd_start(&s_httpServer, &config)

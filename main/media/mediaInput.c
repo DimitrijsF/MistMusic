@@ -8,8 +8,8 @@
 
 #include <mediaInput.h>
 
-#define INPUT_READ_SAMPLES 256
-#define INPUT_READ_TIMEOUT_MS 20
+#define INPUT_READ_SAMPLES 1024
+
 static int32_t InputBuffer[INPUT_READ_SAMPLES];
 
 static const char *TAG = "MEDIA_INPUT";
