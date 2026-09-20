@@ -26,7 +26,8 @@ idf_component_register(
         "wifi/wifiService.c"
         "wifi/wifiHttp.c"
 
-        "sourceManager/sourceManager.c"
+        "managers/sourceManager.c"
+        "managers/powerManager.c"
 
         "components/mp3dec.c"
         "components/mp3tabs.c"
@@ -52,7 +53,7 @@ idf_component_register(
         "cdc"
         "bluetooth"
         "wifi"
-        "sourceManager"
+        "managers"
         "components/pub"
         "components/real"
 

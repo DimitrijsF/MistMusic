@@ -5,7 +5,7 @@
 
 #include <bm83_player.h>
 #include <bm83_state.h>
-#include <sourceManager/sourceManager.h>
+#include <managers/sourceManager.h>
 #include <cdc/cdc_protocol.h>
 #include <bm83_protocol.h>
 
@@ -49,9 +49,9 @@ void BtPlayer_Stop(void){
         }
         BtProto_SendStop();
     }
+    IsPlaying = false;
     Input_Stop();
     Output_Stop();
-    IsPlaying = false;
 }
 void BtPlayer_Pause(void){
     BtState_SetLinkPause();
@@ -59,7 +59,7 @@ void BtPlayer_Pause(void){
     BtPlayer_Stop();
 }
 void BtPlayer_SwitchTrack(uint8_t track){
-    if(track > BT_CONSTANT_TRACK){
+    if(track >= BT_CONSTANT_TRACK){
         BtProto_SendNextTrack();
     }
     else{
@@ -74,6 +74,12 @@ static void PlayerTask(void *arg){
     if(timerTaskHandle == NULL)
         xTaskCreate(PlayerTimerTask, "PlayerTimer", 4096, NULL, 5, &timerTaskHandle);
     BtProto_SendPlay();
+    MediaOutputFormat format = {
+        .SampleRate = 44100,
+        .Channels = 2,
+        .Bits = 16
+    };
+    Output_SetFormat(format);
     while (BtState_GetLinkState() == LINK_PLAY)
     {
         if(!Input_IsStarted()){

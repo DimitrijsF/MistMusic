@@ -55,7 +55,6 @@ void SrcManager_UsbReady(void){
         BtPlayer_Stop();
         BtState_SetOff();
         if(CdcState_GetCdcState() == CDC_PLAY){
-            BtPlayer_Stop();
             UsbPlayer_Play();
         }
     }
@@ -93,8 +92,8 @@ void SrcManager_ProcessEject(void){
 void SrcManager_CompleteEject(void){
     UsbState_Eject();
     CdcState_CdcNoDisk();
-    if(BtState_GetLinkState() == LINK_STOP){
-        vTaskDelay(pdMS_TO_TICKS(1000));
+    if(BtState_GetLinkState() != LINK_DISCONNECTED){
+        vTaskDelay(pdMS_TO_TICKS(3000));
         SrcManager_SourceIn();
     }
     else
@@ -128,23 +127,24 @@ void SrcManager_Play(void){
             BtPlayer_Play();
         return;
     }
+    CdcState_CdcPlay();
 }
 void SrcManager_Stop(void){
     ESP_LOGI(TAG, "STOP called");
+    ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
     if(CurrentPlayer == USB){
         if(CdcState_GetCdcState() == CDC_PLAY){
-            UsbPlayer_Stop();
-            CdcState_CdcStopPlay();
+            UsbPlayer_Stop();         
         }
         return;
     }
     if(CurrentPlayer == BT){
         if(BtState_GetLinkState() == LINK_PLAY){
-            BtPlayer_Pause();
-            CdcState_CdcStopPlay();
+            BtPlayer_Stop();
         }
         return;
     }
+    CdcState_CdcStopPlay();
 }
 void SrcManager_SwitchTrack(uint8_t track){
      ESP_LOGI(TAG, "Switch Track");

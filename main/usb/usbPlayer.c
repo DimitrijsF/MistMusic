@@ -15,7 +15,7 @@
 #include <usbState.h>
 #include <media/mediaOutput.h>
 #include <usbDecoder.h>
-#include <sourceManager/sourceManager.h>
+#include <managers/sourceManager.h>
 
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;

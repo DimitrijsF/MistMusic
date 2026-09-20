@@ -9,9 +9,11 @@
 #include <media/mediaInput.h>
 #include <bluetooth/bm83.h>
 #include <wifi/wifiService.h>
+#include <managers/powerManager.h>
 
 void app_main(void)
 {
+    Power_Init();
     WifiService_Init();
     cdcInit();
     UsbHost_Init();

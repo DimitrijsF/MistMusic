@@ -14,7 +14,7 @@
 #include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
 
-#include <sourceManager/sourceManager.h>
+#include <managers/sourceManager.h>
 
 static const char *TAG = "CDC_PROTOCOL";
 static LoadingState loadingState = STEP0;
@@ -205,7 +205,7 @@ void HandleLoadingState(const uint8_t *packet){
 }
 static void HandleEjectRequest(const uint8_t *packet){
     (void)packet;
-    
+    SrcManager_Stop();
     CdcUart_Send(ProtoStatusEjecting1, sizeof(ProtoStatusEjecting1));
     CdcUart_Send(ProtoStatusEjecting2, sizeof(ProtoStatusEjecting2));
     SetEjectingState(FINISH);

@@ -5,7 +5,8 @@
 #include <bluetooth/bm83_state.h>
 #include <bluetooth/bm83_protocol.h>
 
-#include <sourceManager/sourceManager.h>
+#include <managers/sourceManager.h>
+#include <managers/powerManager.h>
 
 #include <wifi/wifiService.h>
 
@@ -25,7 +26,8 @@ static void CdcStateTask(void *arg){
         if (CdcState_GetCdcState() == CDC_STANDBY)
         {
             if(IsHeadEnabled()){
-                CdcState_CdcBoot();
+                Power_Enable();
+                CdcState_CdcBoot();        
                 WifiService_Start();
                 SrcManager_CheckSource();
             }
@@ -35,6 +37,8 @@ static void CdcStateTask(void *arg){
                 CdcState_CdcStandby();
                 WifiService_Stop();
                 BtProto_SendPowerOff();
+                vTaskDelay(pdMS_TO_TICKS(100));
+                Power_Standby();
             }
         }
 

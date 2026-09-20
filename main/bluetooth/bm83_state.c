@@ -7,7 +7,7 @@
 #include <bm83_protocol.h>
 #include <cdc/cdc_state.h>
 
-#include <sourceManager/sourceManager.h>
+#include <managers/sourceManager.h>
 
 static bool IsInitialized = false;
 static BtState DeviceState = BT_POWEROFF;
