@@ -2,11 +2,6 @@
 
 #include <inttypes.h>
 
-typedef enum{
-    USB,
-    BT
-} ActivePlayer;
-
 typedef struct
 {
     uint8_t Minutes;
@@ -14,7 +9,8 @@ typedef struct
     uint8_t Track;
 } PlayStatus;
 
-ActivePlayer SrcManager_GetCurrentPlayer(void);
+void PlayerManager_Init(void);
+void PlayerManager_SaveState(void);
 
 void PlayerManager_SourceIn(void);
 void PlayerManager_UsbReady(void);

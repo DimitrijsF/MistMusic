@@ -2,15 +2,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include <usb/usbHost.h>
-#include <usb/usbStorage.h>
-#include <media/mediaOutput.h>
+#include <manager/playerManager.h>
 
 void app_main(void)
 {
-    UsbHost_Init();
-    UsbStorage_Init();
-    Output_Init();
+    PlayerManager_Init();
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));

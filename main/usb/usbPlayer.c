@@ -38,18 +38,13 @@ static const char* TAG = "USB_PLAYER";
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
 
-static uint16_t Player_GetRealTrackByPosition(
-    uint8_t page,
-    uint8_t track)
-{
+uint16_t Player_GetRealTrackByPosition(uint8_t page, uint8_t track){
     return page * TRACKS_PER_PAGE + track;
 }
-static uint16_t Player_GetRealTrack()
-{
+static uint16_t Player_GetRealTrack(){
     return CurrentPage * TRACKS_PER_PAGE + CurrentTrack;
 }
-static void Player_CalcTrackSwitch(void)
-{
+static void Player_CalcTrackSwitch(void){
     uint16_t trackCount = UsbLibrary_GetCount();
     requestedPage = CurrentPage;
     if(CurrentTrack == TRACKS_PER_PAGE)
@@ -72,10 +67,8 @@ static void Player_CalcTrackSwitch(void)
         if(CurrentPage == 0)
         {
             uint16_t lastRealTrack = trackCount - 1;
-            requestedPage =
-                lastRealTrack / TRACKS_PER_PAGE;
-            requestedTrack =
-                (lastRealTrack % TRACKS_PER_PAGE) + 1;
+            requestedPage = lastRealTrack / TRACKS_PER_PAGE;
+            requestedTrack = (lastRealTrack % TRACKS_PER_PAGE) + 1;
         }
         else
         {
@@ -94,8 +87,8 @@ void UsbPlayer_SwitchTrack(uint8_t track)
     if(UsbState_GetUsbRandom()){
         if(track > CurrentTrack){
             uint32_t randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
-            requestedPage = (randomRealTrack - 1) / TRACKS_PER_PAGE;
-            requestedTrack = ((randomRealTrack - 1) % TRACKS_PER_PAGE) + 1;
+            requestedPage = UsbLibrary_GetVirtualPage(randomRealTrack);
+            requestedTrack = UsbLibrary_GetVirtualTrack(randomRealTrack);
         }
         else{
             requestedTrack = CurrentTrack;
@@ -136,8 +129,8 @@ static bool Player_CalcNextTrack(
     {
         uint16_t randomRealTrack = (esp_random() % trackCount) + 1;
 
-        *nextPage = (randomRealTrack - 1) / TRACKS_PER_PAGE;
-        *nextTrack = ((randomRealTrack - 1) % TRACKS_PER_PAGE) + 1;
+        *nextPage = UsbLibrary_GetVirtualPage(randomRealTrack);
+        *nextTrack = UsbLibrary_GetVirtualTrack(randomRealTrack);
         *headTrack = *nextTrack;
 
         return true;
@@ -383,4 +376,10 @@ void UsbPlayer_SaveCurrentTrackPage(void){
 }
 void UsbPlayer_ResetSavedState(void){
     StateSaved = false;
+}
+uint8_t UsbPlayer_GetCurrentTrack(void){
+    return CurrentTrack;
+}
+uint8_t UsbPlayer_GetCurrentPage(void){
+    return CurrentPage;
 }

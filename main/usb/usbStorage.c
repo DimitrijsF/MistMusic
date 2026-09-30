@@ -14,7 +14,7 @@
 #include <cdc/cdc_protocol.h>
 #include <usbState.h>
 
-static const char *TAG = "MSC";
+static const char *TAG = "USB_STORAGE";
 
 static msc_host_device_handle_t g_Device = NULL;
 static msc_host_vfs_handle_t g_Vfs = NULL;

@@ -126,12 +126,6 @@ void UsbLibrary_Clear(void){
 uint16_t UsbLibrary_GetCount(void){
     return g_TrackCount;
 }
-uint16_t UsbLibrary_GetVirtualCount(void){
-    if(g_TrackCount >= TRACKS_PER_PAGE)
-        return VIRTUAL_TRACK_COUNT;
-    else 
-        return g_TrackCount;
-}
 
 UsbTrack *UsbLibrary_GetTrack(uint16_t number){
     if(number == 0 ||
@@ -214,4 +208,13 @@ void UsbLibrary_SetSavedPage(uint8_t page){
 }
 uint8_t UsbLibrary_GetSavedPage(void){
     return SavedPage;
+}
+uint8_t UsbLibrary_GetVirtualTrack(uint16_t realTrack){
+    return ((realTrack - 1) % TRACKS_PER_PAGE) + 1;
+}
+uint8_t UsbLibrary_GetVirtualPage(uint16_t realTrack){
+    return (realTrack - 1) / TRACKS_PER_PAGE;
+}
+uint16_t UsbLibrary_GetRealTrackByPosition(uint8_t page, uint8_t track){
+    return page * TRACKS_PER_PAGE + track;
 }

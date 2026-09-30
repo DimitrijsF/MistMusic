@@ -42,15 +42,6 @@ static const char *StateToString(CdcState state)
         default: return "UNKNOWN";
     }
 }
-void CdcState_CdcBoot(void){
-    SetCdcState(CDC_BOOT);
-    CdcUart_Init();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    if(UsbStorage_DriveIn() && !UsbLibrary_IsEmpty())
-        SetCdcState(CDC_STOP); 
-    else
-        SetCdcState(CDC_NOCD);
-}
 void CdcState_CdcLoading(void){
     SetCdcState(CDC_LOADING);
 }

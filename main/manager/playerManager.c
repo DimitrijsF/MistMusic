@@ -5,30 +5,27 @@
 #include <string.h>
 
 #include <playerManager.h>
+#include <nvsManager.h>
+
 #include <usb/usbState.h>
 #include <usb/usbStorage.h>
 #include <usb/usbLibrary.h>
-#include <cdc/cdc_state.h>
 #include <usb/usbPlayer.h>
+#include <usb/usbHost.h>
+
 #include <cdc/cdc_protocol.h>
+#include <cdc/cdc_state.h>
+#include <cdc/cdc_uart.h>
 
-static const char *TAG = "SRC_MANAGER";
+#include <wifi/wifiService.h>
 
-static ActivePlayer CurrentPlayer = USB;
+#include <media/mediaOutput.h>
 
-ActivePlayer SrcManager_GetCurrentPlayer(void){
-    return CurrentPlayer;
-}
-static const char *CurrentPlayerToString()
-{
-    switch (CurrentPlayer)
-    {
-        case USB: return "USB";
-        case BT: return "BT";
-        default: return "UNKNOWN";
-    }
-}
-#pragma region Source change
+static const char *TAG = "PLAYER_MANAGER";
+
+static void PlayerManager_LoadState(void);
+
+#pragma region Sources
 void PlayerManager_SourceIn(void){
     ESP_LOGI(TAG, "Source IN");
     if(CdcState_GetCdcState() == CDC_NOCD){
@@ -62,7 +59,6 @@ void PlayerManager_SourceOut(void){
         else 
             UsbPlayer_Stop();
     }
-    ESP_LOGI(TAG, "Current player %s", CurrentPlayerToString());
 }
 void PlayerManager_ProcessEject(void){
     ESP_LOGI(TAG, "EJECT called");
@@ -82,26 +78,52 @@ void PlayerManager_SendCurrentStatus(void){
     UsbPlayer_SendCurrentStatus();
 }
 #pragma endregion
-void SrcManager_Play(void){
+#pragma region Arch methods
+/// @brief Main system entry point (all systems init)
+void PlayerManager_Init(void){
+    NvsManager_Init();
+    PlayerManager_LoadState();
+    CdcUart_Init();
+    UsbHost_Init();
+    UsbStorage_Init();
+    Output_Init();
+    WifiService_Init();
+    WifiService_Start();
+}
+static void PlayerManager_LoadState(void){
+    uint16_t nvsTrack = NvsManager_GetTrack();
+    uint8_t track = UsbLibrary_GetVirtualPage(nvsTrack);
+    uint8_t page = UsbLibrary_GetVirtualTrack(nvsTrack);
+    ESP_LOGI(TAG, "Saved track from NVS: %u, page: %u", track, page);
+    UsbLibrary_SetSavedPage(page);
+    UsbLibrary_SetSavedTrack(track);
+    //UsbLibrary_SetSavedPage(UsbLibrary_GetVirtualPage(nvsTrack));
+    //UsbLibrary_SetSavedTrack(UsbLibrary_GetVirtualTrack(nvsTrack));
+    UsbState_SetUsbRandom(NvsManager_GetRandom());
+}
+void PlayerManager_SaveState(void){
+    NvsManager_SetTrack(UsbLibrary_GetRealTrackByPosition(UsbPlayer_GetCurrentPage(), UsbPlayer_GetCurrentTrack()));
+    NvsManager_SetRandom(UsbState_GetUsbRandom());
+    NvsManager_Commit();
+}
+#pragma endregion
+void PlayerManager_Play(void){
     ESP_LOGI(TAG, "PLAY called");
     UsbState usb = UsbState_GetState();
     if(usb == USB_STOP || usb == USB_PLAY)
         UsbPlayer_Play();
     CdcState_CdcPlay();
 }
-void SrcManager_Stop(void){
+void PlayerManager_Stop(void){
     ESP_LOGI(TAG, "STOP called");
-    if(CurrentPlayer == USB){
-        if(CdcState_GetCdcState() == CDC_PLAY){
-            UsbPlayer_Stop();         
-        }
+    if(CdcState_GetCdcState() == CDC_PLAY){
+        UsbPlayer_Stop();         
+        PlayerManager_SaveState();
     }
     CdcState_CdcStopPlay();
 }
-void SrcManager_SwitchTrack(uint8_t track){
+void PlayerManager_SwitchTrack(uint8_t track){
     ESP_LOGI(TAG, "Switch Track");
-    if(CurrentPlayer == USB){
-        UsbPlayer_SwitchTrack(track);
-        return;
-    }
+    UsbPlayer_SwitchTrack(track);
+    return;
 }

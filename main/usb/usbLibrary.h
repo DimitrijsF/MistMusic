@@ -14,16 +14,23 @@ typedef struct
     uint8_t Channels;
 } UsbTrack;
 
+bool UsbLibrary_Begin(void);
 void UsbLibrary_Finish(void);
-bool UsbLibrary_IsSupportedFile(const char *path);
-void UsbLibrary_AddTrack(const char *path);
 void UsbLibrary_Clear(void);
-uint16_t UsbLibrary_GetCount(void);
+
+void UsbLibrary_AddTrack(const char *path);
 UsbTrack *UsbLibrary_GetTrack(uint16_t number);
-bool UsbLibrary_IsEmpty(void);
-uint16_t UsbLibrary_GetVirtualCount(void);
+
 void UsbLibrary_SetSavedTrack(uint8_t track);
 uint8_t UsbLibrary_GetSavedTrack(void);
 void UsbLibrary_SetSavedPage(uint8_t page);
 uint8_t UsbLibrary_GetSavedPage(void);
-bool UsbLibrary_Begin(void);
+
+uint8_t UsbLibrary_GetVirtualTrack(uint16_t realTrack);
+uint8_t UsbLibrary_GetVirtualPage(uint16_t realTrack);
+
+bool UsbLibrary_IsSupportedFile(const char *path);
+uint16_t UsbLibrary_GetCount(void);
+bool UsbLibrary_IsEmpty(void);
+
+uint16_t UsbLibrary_GetRealTrackByPosition(uint8_t page, uint8_t track);

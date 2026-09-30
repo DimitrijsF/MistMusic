@@ -19,6 +19,7 @@ idf_component_register(
         "wifi/wifiService.c"
 
         "manager/playerManager.c"
+        "manager/nvsManager.c"
 
         "components/mp3dec.c"
         "components/mp3tabs.c"
@@ -47,4 +48,7 @@ idf_component_register(
         "manager"
         "components/pub"
         "components/real"
+
+    EMBED_TXTFILES
+        "wifi/web/index.html"
 )
