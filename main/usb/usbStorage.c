@@ -6,12 +6,15 @@
 
 #include "usb/msc_host.h"
 #include "usb/msc_host_vfs.h"
+
 #include <manager/playerManager.h>
+#include <manager/nvsManager.h>
 
 #include "usbStorage.h"
 #include "usb/usbLibrary.h"
 #include <usb/usbPlayer.h>
 #include <cdc/cdc_protocol.h>
+#include <cdc/cdc_state.h>
 #include <usbState.h>
 
 static const char *TAG = "USB_STORAGE";
@@ -168,9 +171,7 @@ static esp_err_t UsbStorage_ReadFS(void){
          "Filesystem mounted at /usb");
     if(!UsbLibrary_Begin())
         return ESP_FAIL;
-
     UsbStorage_ScanDirectory("/usb");
-
     UsbLibrary_Finish();
     return ESP_OK;
 }
@@ -229,6 +230,10 @@ static void UsbStorageTask(void *arg){
             UsbPlayer_ResetSavedState();   
             UsbLibrary_Clear();
             UsbStorage_OpenDevice();
+            if(NvsManager_GetDiskIn())
+               CdcState_CdcStopPlay();
+            else
+                CdcState_CdcNoDisk(); 
             PlayerManager_SourceIn();
             if (g_Device != NULL)
                 UsbStorage_ReadFS();

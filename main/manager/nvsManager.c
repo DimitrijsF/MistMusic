@@ -13,189 +13,141 @@ static const char *TAG = "NVS_MANAGER";
 
 #define KEY_TRACK  "track"
 #define KEY_RANDOM "random"
+#define KEY_DISKIN "diskIn"
+#define KEY_FINGERPRINT "fingerprint"
 
 static nvs_handle_t NvsHandle = 0;
 static bool IsInitialized = false;
 
-bool NvsManager_Init(void)
-{
+bool NvsManager_Init(void){
     if (IsInitialized)
         return true;
-
     esp_err_t err = nvs_flash_init();
-
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
-        err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND){
         ESP_LOGW(TAG, "NVS requires erase");
-
         err = nvs_flash_erase();
-
         if (err != ESP_OK)
             return false;
-
         err = nvs_flash_init();
     }
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "NVS initialization failed: %s",
-            esp_err_to_name(err));
-
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "NVS initialization failed: %s", esp_err_to_name(err));
         return false;
     }
-
-    err = nvs_open(
-        NVS_NAMESPACE,
-        NVS_READWRITE,
-        &NvsHandle);
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "Failed to open namespace: %s",
-            esp_err_to_name(err));
-
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &NvsHandle);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to open namespace: %s", esp_err_to_name(err));
         return false;
     }
-
     IsInitialized = true;
-
     ESP_LOGI(TAG, "NVS manager initialized");
-
     return true;
 }
-
-uint16_t NvsManager_GetTrack(void)
-{
-    uint16_t track = 1;
-
+uint16_t NvsManager_GetTrack(void){
+    uint16_t track = 0;
     if (!IsInitialized)
         return track;
-
-    esp_err_t err =
-        nvs_get_u16(NvsHandle, KEY_TRACK, &track);
-
-    if (err == ESP_ERR_NVS_NOT_FOUND)
-    {
-        ESP_LOGI(
-            TAG,
-            "Track not found, using default: %u",
-            track);
-
+    esp_err_t err = nvs_get_u16(NvsHandle, KEY_TRACK, &track);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
+        ESP_LOGI(TAG, "Track not found, using default: %u", track);
         return track;
     }
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "Failed to read track: %s",
-            esp_err_to_name(err));
-
-        return 1;
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read track: %s", esp_err_to_name(err));
+        return 0;
     }
-
     return track;
 }
-
-bool NvsManager_SetTrack(uint16_t track)
-{
+bool NvsManager_SetTrack(uint16_t track){
     if (!IsInitialized)
         return false;
-
-    esp_err_t err =
-        nvs_set_u8(
-            NvsHandle,
-            KEY_TRACK,
-            track);
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "Failed to set track: %s",
-            esp_err_to_name(err));
-
+    esp_err_t err = nvs_set_u8(NvsHandle, KEY_TRACK, track);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set track: %s", esp_err_to_name(err));
         return false;
     }
-
     return true;
 }
-
-bool NvsManager_GetRandom(void)
-{
+bool NvsManager_GetRandom(void){
     uint8_t random = 0;
-
     if (!IsInitialized)
         return false;
-
-    esp_err_t err =
-        nvs_get_u8(
-            NvsHandle,
-            KEY_RANDOM,
-            &random);
-
-    if (err == ESP_ERR_NVS_NOT_FOUND)
-    {
+    esp_err_t err = nvs_get_u8(NvsHandle, KEY_RANDOM, &random);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
         return false;
     }
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "Failed to read random: %s",
-            esp_err_to_name(err));
-
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read random: %s", esp_err_to_name(err));
         return false;
     }
-
     return random != 0;
 }
-
-bool NvsManager_SetRandom(bool random)
-{
+bool NvsManager_SetRandom(bool random){
     if (!IsInitialized)
         return false;
-
-    esp_err_t err =
-        nvs_set_u8(
-            NvsHandle,
-            KEY_RANDOM,
-            random ? 1 : 0);
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "Failed to set random: %s",
-            esp_err_to_name(err));
-
+    esp_err_t err = nvs_set_u8(NvsHandle, KEY_RANDOM, random ? 1 : 0);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set random: %s", esp_err_to_name(err));
         return false;
     }
-
     return true;
 }
-bool NvsManager_Commit(void)
-{
+bool NvsManager_GetDiskIn(void){
+    uint8_t diskIn = 0;
     if (!IsInitialized)
         return false;
-
-    esp_err_t err = nvs_commit(NvsHandle);
-
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(
-            TAG,
-            "NVS commit failed: %s",
-            esp_err_to_name(err));
-
+    esp_err_t err = nvs_get_u8(NvsHandle, KEY_DISKIN, &diskIn);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
         return false;
     }
-
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read diskIn: %s", esp_err_to_name(err));
+        return false;
+    }
+    return diskIn != 0;
+}
+bool NvsManager_SetDiskIn(bool diskIn){
+    if (!IsInitialized)
+        return false;
+    esp_err_t err = nvs_set_u8(NvsHandle, KEY_DISKIN, diskIn ? 1 : 0);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set diskIn: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+uint32_t NvsManager_GetFingerprint(void){
+    uint32_t fingerprint = 0;
+    if (IsInitialized){
+        esp_err_t err = nvs_get_u32(NvsHandle, KEY_FINGERPRINT, &fingerprint);
+        if (err == ESP_ERR_NVS_NOT_FOUND){
+            ESP_LOGI(TAG, "Fingerprint not found, using default: %u", fingerprint);
+            return fingerprint;
+        }
+        if (err != ESP_OK){
+            ESP_LOGE(TAG, "Failed to read track: %s", esp_err_to_name(err));
+            return fingerprint;
+        }
+    }
+    return fingerprint;
+}
+bool NvsManager_SetFingerprint(uint32_t fingerprint){
+     if (!IsInitialized)
+        return false;
+    esp_err_t err = nvs_set_u32(NvsHandle, KEY_FINGERPRINT, fingerprint);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set fingerprint: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+bool NvsManager_Commit(void){
+    if (!IsInitialized)
+        return false;
+    esp_err_t err = nvs_commit(NvsHandle);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "NVS commit failed: %s", esp_err_to_name(err));
+        return false;
+    }
     return true;
 }

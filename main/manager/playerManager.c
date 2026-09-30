@@ -23,8 +23,6 @@
 
 static const char *TAG = "PLAYER_MANAGER";
 
-static void PlayerManager_LoadState(void);
-
 #pragma region Sources
 void PlayerManager_SourceIn(void){
     ESP_LOGI(TAG, "Source IN");
@@ -82,7 +80,7 @@ void PlayerManager_SendCurrentStatus(void){
 /// @brief Main system entry point (all systems init)
 void PlayerManager_Init(void){
     NvsManager_Init();
-    PlayerManager_LoadState();
+    UsbState_SetUsbRandom(NvsManager_GetRandom());
     CdcUart_Init();
     UsbHost_Init();
     UsbStorage_Init();
@@ -90,20 +88,13 @@ void PlayerManager_Init(void){
     WifiService_Init();
     WifiService_Start();
 }
-static void PlayerManager_LoadState(void){
-    uint16_t nvsTrack = NvsManager_GetTrack();
-    uint8_t track = UsbLibrary_GetVirtualPage(nvsTrack);
-    uint8_t page = UsbLibrary_GetVirtualTrack(nvsTrack);
-    ESP_LOGI(TAG, "Saved track from NVS: %u, page: %u", track, page);
-    UsbLibrary_SetSavedPage(page);
-    UsbLibrary_SetSavedTrack(track);
-    //UsbLibrary_SetSavedPage(UsbLibrary_GetVirtualPage(nvsTrack));
-    //UsbLibrary_SetSavedTrack(UsbLibrary_GetVirtualTrack(nvsTrack));
-    UsbState_SetUsbRandom(NvsManager_GetRandom());
-}
 void PlayerManager_SaveState(void){
     NvsManager_SetTrack(UsbLibrary_GetRealTrackByPosition(UsbPlayer_GetCurrentPage(), UsbPlayer_GetCurrentTrack()));
     NvsManager_SetRandom(UsbState_GetUsbRandom());
+    if(CdcState_GetCdcState() == CDC_NOCD)
+        NvsManager_SetDiskIn(false);
+    else
+        NvsManager_SetDiskIn(true);
     NvsManager_Commit();
 }
 #pragma endregion

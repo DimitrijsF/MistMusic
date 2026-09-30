@@ -4,8 +4,11 @@
 #include <stdio.h>
 
 #include "esp_log.h"
+#include <manager/playerManager.h>
+#include <manager/nvsManager.h>
 
 #include <UsbLibrary.h>
+#include <usbPlayer.h>
 
 #define MEDIA_LIBRARY_INDEX_PATH "/usb/cd30_index"
 
@@ -19,7 +22,6 @@ static FILE *g_IndexFile = NULL;
 
 static UsbTrack g_CurrentTrack;
 static uint32_t g_CurrentCrc = 0xFFFFFFFF;
-static uint32_t Fingerprint = 0;
 
 static uint32_t UsbLibrary_UpdateCrc32(uint32_t crc, const uint8_t *data, size_t length);
 
@@ -48,34 +50,35 @@ bool UsbLibrary_Begin(void)
 }
 void UsbLibrary_Finish(void)
 {
-    if(g_IndexFile != NULL)
-    {
+    if(g_IndexFile != NULL){
         fclose(g_IndexFile);
         g_IndexFile = NULL;
     }
 
-    uint32_t currentPrint =
-        g_CurrentCrc ^ 0xFFFFFFFF;
+    uint32_t currentPrint = g_CurrentCrc ^ 0xFFFFFFFF;
 
-    ESP_LOGI(
-        TAG,
-        "Tracks: %u",
-        g_TrackCount);
-
-    if(Fingerprint != 0)
-    {
-        if(currentPrint != Fingerprint)
-        {
-            ESP_LOGI(
-                TAG,
-                "Library changed");
-
+    ESP_LOGI(TAG, "Tracks: %u", g_TrackCount);
+    
+    uint32_t fingerprint = NvsManager_GetFingerprint();
+    if(fingerprint != 0){
+        if(currentPrint != fingerprint){
+            ESP_LOGI( TAG, "Library changed");
             SavedTrack = 0;
             SavedPage = 0;
         }
+        else{
+            uint16_t nvsTrack = NvsManager_GetTrack();
+            uint8_t track = UsbLibrary_GetVirtualPage(nvsTrack);
+            uint8_t page = UsbLibrary_GetVirtualTrack(nvsTrack);
+            ESP_LOGI(TAG, "Saved track from NVS: %u, page: %u", track, page);
+            UsbLibrary_SetSavedPage(page);
+            UsbLibrary_SetSavedTrack(track);
+            //UsbLibrary_SetSavedPage(UsbLibrary_GetVirtualPage(nvsTrack));
+            //UsbLibrary_SetSavedTrack(UsbLibrary_GetVirtualTrack(nvsTrack));
+        }
     }
-
-    Fingerprint = currentPrint;
+    NvsManager_SetFingerprint(currentPrint);
+    NvsManager_Commit();
 }
 
 bool UsbLibrary_IsSupportedFile(const char *path)
