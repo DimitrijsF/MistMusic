@@ -121,7 +121,7 @@ uint32_t NvsManager_GetFingerprint(void){
     if (IsInitialized){
         esp_err_t err = nvs_get_u32(NvsHandle, KEY_FINGERPRINT, &fingerprint);
         if (err == ESP_ERR_NVS_NOT_FOUND){
-            ESP_LOGI(TAG, "Fingerprint not found, using default: %u", fingerprint);
+            ESP_LOGI(TAG, "Fingerprint not found, using empty");
             return fingerprint;
         }
         if (err != ESP_OK){
