@@ -5,9 +5,9 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 
-#include <media/mediaPlayer.h>
-#include <media/mediaLibrary.h>
-#include <media/mediaDecoder.h>
+#include <usb/usbPlayer.h>
+#include <usb/usbLibrary.h>
+#include <usb/usbDecoder.h>
 #include <media/mediaOutput.h>
 
 #include <mp3dec.h>
@@ -182,7 +182,7 @@ static DecoderResult Decoder_DecodeFrame(void)
                 Output_Start();
             }
 
-            Player_UpdateTime(
+            UsbPlayer_UpdateTime(
                 g_FrameInfo.outputSamps /
                     g_FrameInfo.nChans,
                 g_FrameInfo.samprate);

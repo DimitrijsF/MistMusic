@@ -4,12 +4,10 @@
 
 #include <usb/usbHost.h>
 #include <usb/usbStorage.h>
-#include <cdc/cdc.h>
 #include <media/mediaOutput.h>
 
 void app_main(void)
 {
-    cdcInit();
     UsbHost_Init();
     UsbStorage_Init();
     Output_Init();

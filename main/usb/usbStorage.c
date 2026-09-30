@@ -6,12 +6,13 @@
 
 #include "usb/msc_host.h"
 #include "usb/msc_host_vfs.h"
+#include <manager/playerManager.h>
 
 #include "usbStorage.h"
-#include "media/mediaLibrary.h"
-#include <media/mediaPlayer.h>
-#include <cdc/cdc_state.h>
+#include "usb/usbLibrary.h"
+#include <usb/usbPlayer.h>
 #include <cdc/cdc_protocol.h>
+#include <usbState.h>
 
 static const char *TAG = "MSC";
 
@@ -42,7 +43,9 @@ static void StorageCallback(const msc_host_event_t *event, void *arg)
         case MSC_DEVICE_DISCONNECTED:
             g_DeviceConnected = false;
             g_DeviceDisconnectRequested = true;
-            MediaLibrary_Clear();
+            UsbLibrary_Clear();
+            UsbState_Eject();
+            PlayerManager_SourceOut();
             ESP_LOGI(TAG, "MSC device disconnected");
         break;
 
@@ -128,9 +131,9 @@ static void UsbStorage_ScanDirectory(const char *path)
         {
             UsbStorage_ScanDirectory(fullPath);
         }
-        else if(Media_IsSupportedFile(fullPath))
+        else if(UsbLibrary_IsSupportedFile(fullPath))
         {
-            MediaLibrary_AddTrack(MEDIA_SOURCE_USB, fullPath);
+            UsbLibrary_AddTrack(fullPath);
         }
     }
 
@@ -163,12 +166,12 @@ static esp_err_t UsbStorage_ReadFS(void){
 
     ESP_LOGI(TAG,
          "Filesystem mounted at /usb");
-    if(!MediaLibrary_Begin())
+    if(!UsbLibrary_Begin())
         return ESP_FAIL;
 
     UsbStorage_ScanDirectory("/usb");
 
-    MediaLibrary_Finish();
+    UsbLibrary_Finish();
     return ESP_OK;
 }
 
@@ -178,8 +181,8 @@ static void UsbStorageTask(void *arg){
         if (g_EjectRequested)
         {
             g_EjectRequested = false;
-            Player_Stop();
-            MediaLibrary_Clear();
+            UsbPlayer_Stop();
+            UsbLibrary_Clear();
             if (g_Vfs != NULL)
             {
                 msc_host_vfs_unregister(g_Vfs);
@@ -199,7 +202,7 @@ static void UsbStorageTask(void *arg){
         if (g_DeviceDisconnectRequested)
         {
             g_DeviceDisconnectRequested = false;
-            Player_Stop();
+            UsbPlayer_Stop();
 
             if (g_Vfs != NULL)
             {
@@ -216,21 +219,21 @@ static void UsbStorageTask(void *arg){
             g_DeviceInstalled = false;
             g_DeviceAddress = 0;
 
-            MediaLibrary_Clear();
-
+            UsbLibrary_Clear();
             ESP_LOGI(TAG, "USB storage disconnected");
         }
         if (g_DeviceConnected && !g_DeviceInstalled)
         {
             g_DeviceInstalled = true;
-            Player_ResetSavedState();   
-            MediaLibrary_Clear();
+            UsbState_Loading();
+            UsbPlayer_ResetSavedState();   
+            UsbLibrary_Clear();
             UsbStorage_OpenDevice();
-            if (GetCdcState() != STANDBY)
-                CdcLoadDisk();
+            PlayerManager_SourceIn();
             if (g_Device != NULL)
                 UsbStorage_ReadFS();
-            CdcProtocol_CompleteLoad();
+            PlayerManager_UsbReady();
+            UsbState_Stop();
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
