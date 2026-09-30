@@ -63,8 +63,7 @@ static bool FillBuffer(void)
 
 bool Decoder_Open(uint16_t trackNumber)
 {
-    MediaTrack *track =
-        MediaLibrary_GetTrack(trackNumber);
+    UsbTrack *track = UsbLibrary_GetTrack(trackNumber);
 
     if(track == NULL)
         return false;
@@ -334,12 +333,9 @@ long Decoder_GetPosition(void)
 
     return position;
 }
-bool Decoder_OpenAt(
-    uint16_t trackNumber,
-    long position)
+bool Decoder_OpenAt(uint16_t trackNumber, long position)
 {
-    MediaTrack *track =
-        MediaLibrary_GetTrack(trackNumber);
+    UsbTrack *track = UsbLibrary_GetTrack(trackNumber);
 
     if(track == NULL)
         return false;
