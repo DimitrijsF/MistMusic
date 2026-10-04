@@ -2,7 +2,8 @@
 
 #include <inttypes.h>
 
-#include <media/mediaPlayer.h>
+#include <usb/usbPlayer.h>
+#include <manager/playerManager.h>
 
 typedef struct
 {
@@ -39,7 +40,7 @@ typedef enum{
 void CdcProtocol_ProcessPacket(const uint8_t *packet, uint8_t length);
 void CdcProtocol_SendAck(const uint8_t *packet, uint8_t length);
 void CdcProtocol_SendPlayStatus(PlayStatus status);
-void ProtocolDriveIn(void);
+void CdcProtocol_DriveIn(void);
 void CdcProtocol_SendPlayReadyPacket(uint8_t track);
 void CdcProtocol_SendPlayStartPacket(uint8_t track);
 void CdcProtocol_SendStatusTocReady(void);

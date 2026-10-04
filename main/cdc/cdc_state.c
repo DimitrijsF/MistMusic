@@ -8,16 +8,16 @@
 #include <cdc_state.h>
 #include <cdc_protocol.h>
 #include <cdc_uart.h>
-#include <media/mediaLibrary.h>
-#include <media/mediaPlayer.h>
+#include <usb/usbLibrary.h>
+#include <usb/usbPlayer.h>
 #include <usb/usbStorage.h>
 
-static CdcState State = STANDBY;
+static CdcState State = CDC_BOOT;
 static const char *TAG = "CDC_STATE";
 
 static const char *StateToString(CdcState state);
 
-CdcState GetCdcState(void){
+CdcState CdcState_GetCdcState(void){
     return State;
 }
 static void SetCdcState(CdcState state){
@@ -33,44 +33,28 @@ static const char *StateToString(CdcState state)
 {
     switch (state)
     {
-        case STANDBY: return "STANDBY";
-        case BOOT:    return "BOOT";
-        case NO_DISK: return "NO_DISK";
-        case LOADING: return "LOADING";
-        case EJECTING: return "EJECTING";
-        case PLAY: return "PLAY";
-        case STOP: return "STOP";
+        case CDC_BOOT: return "CDC_BOOT";
+        case CDC_NOCD: return "CDC_NOCD";
+        case CDC_LOADING: return "CDC_LOADING";
+        case CDC_EJECTING: return "CDC_EJECTING";
+        case CDC_PLAY: return "CDC_PLAY";
+        case CDC_STOP: return "CDC_STOP";
         default: return "UNKNOWN";
     }
 }
-void CdcBoot(void){
-    SetCdcState(BOOT);
-    CdcUart_Init();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    if(UsbStorage_DriveIn() && !MediaLibrary_IsEmpty())
-        SetCdcState(STOP); 
-    else
-        SetCdcState(NO_DISK);
+void CdcState_CdcLoading(void){
+    SetCdcState(CDC_LOADING);
 }
-void CdcStandby(void){
-    SetCdcState(STANDBY);
-    UartShutDown();
+void CdcState_CdcPlay(void){
+    SetCdcState(CDC_PLAY);
 }
-void CdcLoadDisk(void){
-    SetCdcState(LOADING);
-    ProtocolDriveIn();
+void CdcState_CdcStopPlay(void){
+    if(State != CDC_NOCD)
+        SetCdcState(CDC_STOP);
 }
-void CdcPlay(void){
-    SetCdcState(PLAY);
+void CdcState_CdcEjectStart(void){
+    SetCdcState(CDC_EJECTING);
 }
-void CdcStopPlay(void){
-    if(State != NO_DISK)
-        SetCdcState(STOP);
-    SetCdcState(STOP);
-}
-void CdcEjectStart(void){
-    SetCdcState(EJECTING);
-}
-void CdcNoDisk(void){
-    SetCdcState(NO_DISK);
+void CdcState_CdcNoDisk(void){
+    SetCdcState(CDC_NOCD);
 }

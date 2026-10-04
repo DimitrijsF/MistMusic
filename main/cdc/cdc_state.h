@@ -3,20 +3,17 @@
 
 typedef enum
 {
-    STANDBY,
-    BOOT,
-    NO_DISK,
-    LOADING,
-    EJECTING,
-    PLAY,
-    STOP
+    CDC_BOOT,
+    CDC_NOCD,
+    CDC_LOADING,
+    CDC_EJECTING,
+    CDC_PLAY,
+    CDC_STOP
 } CdcState;
 
-CdcState GetCdcState(void);
-void CdcBoot(void);
-void CdcStandby(void);
-void CdcLoadDisk(void);
-void CdcPlay(void);
-void CdcStopPlay(void);
-void CdcEjectStart(void);
-void CdcNoDisk(void);
+CdcState CdcState_GetCdcState(void);
+void CdcState_CdcLoading(void);
+void CdcState_CdcPlay(void);
+void CdcState_CdcStopPlay(void);
+void CdcState_CdcEjectStart(void);
+void CdcState_CdcNoDisk(void);

@@ -4,16 +4,22 @@ idf_component_register(
 
         "usb/usbHost.c"
         "usb/usbStorage.c"
-        
-        "media/mediaLibrary.c"
-        "media/mediaPlayer.c"
-        "media/mediaDecoder.c"
+        "usb/usbPlayer.c"
+        "usb/usbState.c"
+        "usb/usbLibrary.c"
+        "usb/usbDecoder.c"
+
         "media/mediaOutput.c"
 
         "cdc/cdc_protocol.c"
         "cdc/cdc_state.c"
         "cdc/cdc_uart.c"     
-        "cdc/cdc.c"
+
+        "wifi/wifiHttp.c"
+        "wifi/wifiService.c"
+
+        "manager/playerManager.c"
+        "manager/nvsManager.c"
 
         "components/mp3dec.c"
         "components/mp3tabs.c"
@@ -38,6 +44,11 @@ idf_component_register(
         "usb"
         "media"
         "cdc"
+        "wifi"
+        "manager"
         "components/pub"
         "components/real"
+
+    EMBED_TXTFILES
+        "wifi/web/index.html"
 )

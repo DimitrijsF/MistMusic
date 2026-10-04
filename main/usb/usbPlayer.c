@@ -7,14 +7,17 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_random.h"
 
-#include <cdc/cdc_state.h>
 #include <cdc/cdc_protocol.h>
-
-#include <media/mediaPlayer.h>
-#include <media/mediaLibrary.h>
+#include <cdc/cdc_state.h>
+#include <usbPlayer.h>
+#include <usbLibrary.h>
+#include <usbState.h>
 #include <media/mediaOutput.h>
-#include <mediaDecoder.h>
+#include <usbDecoder.h>
+#include <manager/playerManager.h>
+#include <manager/nvsManager.h>
 
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
@@ -32,24 +35,20 @@ static volatile uint8_t requestedHeadTrack = 0;
 static long ResumePosition = -1;
 static uint16_t ResumeTrack = 0;
 
-static const char* TAG = "MEDIA_PLAYER";
+static const char* TAG = "USB_PLAYER";
 
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
+static void UsbPlayer_SavePlayerState(void);
 
-static uint16_t Player_GetRealTrackByPosition(
-    uint8_t page,
-    uint8_t track)
-{
+uint16_t Player_GetRealTrackByPosition(uint8_t page, uint8_t track){
     return page * TRACKS_PER_PAGE + track;
 }
-static uint16_t Player_GetRealTrack()
-{
+static uint16_t Player_GetRealTrack(){
     return CurrentPage * TRACKS_PER_PAGE + CurrentTrack;
 }
-static void Player_CalcTrackSwitch(void)
-{
-    uint16_t trackCount = MediaLibrary_GetCount();
+static void Player_CalcTrackSwitch(void){
+    uint16_t trackCount = UsbLibrary_GetCount();
     requestedPage = CurrentPage;
     if(CurrentTrack == TRACKS_PER_PAGE)
     {
@@ -71,10 +70,8 @@ static void Player_CalcTrackSwitch(void)
         if(CurrentPage == 0)
         {
             uint16_t lastRealTrack = trackCount - 1;
-            requestedPage =
-                lastRealTrack / TRACKS_PER_PAGE;
-            requestedTrack =
-                (lastRealTrack % TRACKS_PER_PAGE) + 1;
+            requestedPage = lastRealTrack / TRACKS_PER_PAGE;
+            requestedTrack = (lastRealTrack % TRACKS_PER_PAGE) + 1;
         }
         else
         {
@@ -85,23 +82,35 @@ static void Player_CalcTrackSwitch(void)
     }
     requestedTrack = CurrentTrack;
 }
-void Player_SwitchTrack(uint8_t track)
+void UsbPlayer_SwitchTrack(uint8_t track)
 {
     requestedHeadTrack = track;
     requestedPage = CurrentPage;
 
-    if(track == SWITCH_TRACK_NUMBER)
-        Player_CalcTrackSwitch();
+    if(UsbState_GetUsbRandom()){
+        if(track > CurrentTrack){
+            uint32_t randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
+            requestedPage = UsbLibrary_GetVirtualPage(randomRealTrack);
+            requestedTrack = UsbLibrary_GetVirtualTrack(randomRealTrack);
+        }
+        else{
+            requestedTrack = CurrentTrack;
+        }
+    }
     else
     {
-        uint16_t requestedRealTrack = Player_GetRealTrackByPosition(CurrentPage, track);
-        if(requestedRealTrack > MediaLibrary_GetCount())
-        {
-            requestedPage = 0;
-            requestedTrack = 1;
-        }
+        if(track == VIRTUAL_TRACK_COUNT)
+            Player_CalcTrackSwitch();
         else
-            requestedTrack = track;
+        {
+            uint16_t requestedRealTrack = Player_GetRealTrackByPosition(CurrentPage, track);
+            if(requestedRealTrack > UsbLibrary_GetCount()){
+                requestedPage = 0;
+                requestedTrack = 1;
+            }
+            else
+                requestedTrack = track;
+        }
     }
     PlayedSeconds = 0;
     PlayedSamples = 0;
@@ -113,11 +122,22 @@ static bool Player_CalcNextTrack(
     uint8_t *headTrack)
 {
     uint16_t realTrack = Player_GetRealTrack();
-    uint16_t trackCount = MediaLibrary_GetCount();
+    uint16_t trackCount = UsbLibrary_GetCount();
 
     *nextPage = CurrentPage;
     *nextTrack = CurrentTrack;
     *headTrack = 0;
+
+    if(UsbState_GetUsbRandom())
+    {
+        uint16_t randomRealTrack = (esp_random() % trackCount) + 1;
+
+        *nextPage = UsbLibrary_GetVirtualPage(randomRealTrack);
+        *nextTrack = UsbLibrary_GetVirtualTrack(randomRealTrack);
+        *headTrack = *nextTrack;
+
+        return true;
+    }
     if(realTrack >= trackCount)
     {
         *nextPage = 0;
@@ -130,7 +150,7 @@ static bool Player_CalcNextTrack(
     {
         *nextPage = CurrentPage + 1;
         *nextTrack = 1;
-        *headTrack = SWITCH_TRACK_NUMBER;
+        *headTrack = VIRTUAL_TRACK_COUNT;
 
         return true;
     }
@@ -140,7 +160,7 @@ static bool Player_CalcNextTrack(
     return true;
 }
 
-void Player_Play(void){
+void UsbPlayer_Play(void){
     if(playerTaskHandle != NULL)
         return;
     playerStopRequested = false;
@@ -189,9 +209,9 @@ static void PlayerTask(void *arg)
         goto error_exit;
 
     CdcProtocol_SendPlayStartPacket(CurrentTrack);
-    CdcPlay();
+    UsbState_Play();
 
-    while(GetCdcState() == PLAY)
+    while(UsbState_GetState() == USB_PLAY)
     {
         if(playerStopRequested)
         {
@@ -215,7 +235,7 @@ static void PlayerTask(void *arg)
                 goto error_exit;
             if(requestedHeadTrack != CurrentTrack)
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
-            CdcPlay();
+            UsbState_Play();
             continue;
         }
 
@@ -231,11 +251,9 @@ static void PlayerTask(void *arg)
                 uint8_t headTrack;
                 Decoder_Close();
                 Player_CalcNextTrack(&nextPage, &nextTrack, &headTrack);
-                if(headTrack == SWITCH_TRACK_NUMBER)
+                if(headTrack == VIRTUAL_TRACK_COUNT)
                 {
-                    CdcProtocol_SendPlayStartPacket(
-                        headTrack);
-
+                    CdcProtocol_SendPlayStartPacket(headTrack);
                     vTaskDelay(pdMS_TO_TICKS(100));
                 }
                 CurrentPage = nextPage;
@@ -246,7 +264,7 @@ static void PlayerTask(void *arg)
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
-                CdcPlay();
+                UsbState_Play();
                 break;
             }
             case DECODER_ERROR:
@@ -260,7 +278,7 @@ static void PlayerTask(void *arg)
                     &nextPage,
                     &nextTrack,
                     &headTrack);
-                if(headTrack == SWITCH_TRACK_NUMBER)
+                if(headTrack == VIRTUAL_TRACK_COUNT)
                 {
                     CdcProtocol_SendPlayStartPacket(
                         headTrack);
@@ -274,7 +292,7 @@ static void PlayerTask(void *arg)
                 if(!Decoder_Open(Player_GetRealTrack()))
                     goto error_exit;
                 CdcProtocol_SendPlayStartPacket(CurrentTrack);
-                CdcPlay();
+                UsbState_Play();
                 continue;
             }
         }
@@ -283,6 +301,7 @@ normal_exit:
     ResumePosition = Decoder_GetPosition();
     ResumeTrack = Player_GetRealTrack();
     ResumeSeconds = PlayedSeconds;
+    UsbPlayer_SavePlayerState();
     goto common_exit;
 error_exit:
     ResumePosition = -1;
@@ -293,7 +312,8 @@ error_exit:
     TimeBaseSeconds = 0;
     goto common_exit;
 common_exit:
-    CdcStopPlay();
+    if(UsbState_GetState() != USB_NODISK)
+        UsbState_Stop();
     Decoder_Close();
     Output_Stop();
     playerTaskHandle = NULL;
@@ -302,11 +322,11 @@ common_exit:
     vTaskDelete(NULL);
 }
 
-void Player_Stop(void){
-    if(GetCdcState() != NO_DISK)
+void UsbPlayer_Stop(void){
+    if(UsbState_GetState() != USB_NODISK)
         playerStopRequested = true;
 }
-void Player_Reset(void)
+void UsbPlayer_Reset(void)
 {
     CurrentPage = 0;
     CurrentTrack = 1;
@@ -317,7 +337,7 @@ void Player_Reset(void)
     ResumeTrack = 0;
     ResumeSeconds = 0;
 }
-void Player_UpdateTime(uint16_t samples, uint32_t sampleRate)
+void UsbPlayer_UpdateTime(uint16_t samples, uint32_t sampleRate)
 {
     if(sampleRate == 0)
         return;
@@ -334,7 +354,7 @@ void Player_UpdateTime(uint16_t samples, uint32_t sampleRate)
     };
     CdcProtocol_SendPlayStatus(status);
 }
-void Player_SendCurrentStatus(void){
+void UsbPlayer_SendCurrentStatus(void){
     uint32_t Minutes = PlayedSeconds / 60;
     uint32_t Seconds = PlayedSeconds % 60;
     PlayStatus status =
@@ -345,19 +365,48 @@ void Player_SendCurrentStatus(void){
     };
     CdcProtocol_SendPlayStatus(status);
 }
-void Player_SetCurrentTrackPage(uint8_t track, uint8_t page){
+void UsbPlayer_SetCurrentTrackPage(uint8_t track, uint8_t page){
     CurrentPage = page;
     CurrentTrack = track;
 }
-void Player_SaveCurrentTrackPage(void){
+void UsbPlayer_SaveCurrentTrackPage(void){
     if(!StateSaved)
     {
         ESP_LOGI(TAG, "Saving current track: %u, page: %u", CurrentTrack, CurrentPage);
-        MediaLibrary_SetSavedPage(CurrentPage);
-        MediaLibrary_SetSavedTrack(CurrentTrack);
+        UsbLibrary_SetSavedPage(CurrentPage);
+        UsbLibrary_SetSavedTrack(CurrentTrack);
         StateSaved = true;
     }
 }
-void Player_ResetSavedState(void){
+void UsbPlayer_ResetSavedState(void){
     StateSaved = false;
+}
+uint8_t UsbPlayer_GetCurrentTrack(void){
+    return CurrentTrack;
+}
+uint8_t UsbPlayer_GetCurrentPage(void){
+    return CurrentPage;
+}
+void UsbPlayer_SetResumeState(void){
+    ResumePosition = NvsManager_GetResumePosition();
+    ResumeSeconds = NvsManager_GetResumeSeconds();
+    ResumeTrack = NvsManager_GetTrack();
+    uint8_t vPage = UsbLibrary_GetVirtualPage(ResumeTrack);
+    uint8_t vTrack = UsbLibrary_GetVirtualTrack(ResumeTrack);
+    UsbLibrary_SetSavedPage(vPage);
+    UsbLibrary_SetSavedTrack(vTrack);
+    CurrentPage = vPage;
+    CurrentTrack = vTrack;
+}
+static void UsbPlayer_SavePlayerState(void){
+    NvsManager_SetTrack(UsbLibrary_GetRealTrackByPosition(CurrentPage, CurrentTrack));
+    NvsManager_SetRandom(UsbState_GetUsbRandom());
+    NvsManager_SetResumeSeconds(ResumeSeconds);
+    NvsManager_SetResumePosition(ResumePosition);
+    NvsManager_SetFingerprint(UsbLibrary_GetCurrentFingerprint());
+    if(CdcState_GetCdcState() == CDC_NOCD)
+        NvsManager_SetDiskIn(false);
+    else
+        NvsManager_SetDiskIn(true);
+    NvsManager_Commit();
 }

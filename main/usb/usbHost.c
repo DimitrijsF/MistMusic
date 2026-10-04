@@ -8,7 +8,7 @@
 
 #include "usb/usb_host.h"
 
-static const char *TAG = "USB";
+static const char *TAG = "USB_HOST";
 
 static void UsbHostDaemonTask(void *arg)
 {
