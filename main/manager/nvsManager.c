@@ -15,6 +15,8 @@ static const char *TAG = "NVS_MANAGER";
 #define KEY_RANDOM "random"
 #define KEY_DISKIN "diskIn"
 #define KEY_FINGERPRINT "fingerprint"
+#define KEY_SECONDS "playedSeconds"
+#define KEY_POSITION "trackPosition"
 
 static nvs_handle_t NvsHandle = 0;
 static bool IsInitialized = false;
@@ -61,9 +63,62 @@ uint16_t NvsManager_GetTrack(void){
 bool NvsManager_SetTrack(uint16_t track){
     if (!IsInitialized)
         return false;
-    esp_err_t err = nvs_set_u8(NvsHandle, KEY_TRACK, track);
+    esp_err_t err = nvs_set_u16(NvsHandle, KEY_TRACK, track);
     if (err != ESP_OK){
         ESP_LOGE(TAG, "Failed to set track: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+uint32_t NvsManager_GetResumeSeconds(void){
+    uint32_t seconds = 0;
+    if (!IsInitialized)
+        return seconds;
+    esp_err_t err = nvs_get_u32(NvsHandle, KEY_SECONDS, &seconds);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
+        ESP_LOGI(TAG, "Seconds not found, using default: %" PRIu32, seconds);
+        return seconds;
+    }
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read resume seconds: %s", esp_err_to_name(err));
+        return 0;
+    }
+    return seconds;
+}
+bool NvsManager_SetResumeSeconds(uint32_t seconds){
+    if (!IsInitialized)
+        return false;
+    esp_err_t err = nvs_set_u32(NvsHandle, KEY_SECONDS, seconds);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set resume seconds: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+long NvsManager_GetResumePosition(void)
+{
+    long position = 0;
+    if (!IsInitialized)
+        return position;
+    int64_t nvsPosition = 0;
+    esp_err_t err = nvs_get_i64(NvsHandle, KEY_POSITION, &nvsPosition);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
+        ESP_LOGI(TAG, "Resume position not found, using default: %ld", position);
+        return position;
+    }
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read position: %s", esp_err_to_name(err));
+        return 0;
+    }
+    position = (long)nvsPosition;
+    return position;
+}
+bool NvsManager_SetResumePosition(long position){
+    if (!IsInitialized)
+        return false;
+    esp_err_t err = nvs_set_i64(NvsHandle, KEY_POSITION, position);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set position: %s", esp_err_to_name(err));
         return false;
     }
     return true;

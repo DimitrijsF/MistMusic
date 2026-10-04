@@ -28,6 +28,7 @@ uint8_t UsbLibrary_GetSavedPage(void);
 
 uint8_t UsbLibrary_GetVirtualTrack(uint16_t realTrack);
 uint8_t UsbLibrary_GetVirtualPage(uint16_t realTrack);
+uint32_t UsbLibrary_GetCurrentFingerprint(void);
 
 bool UsbLibrary_IsSupportedFile(const char *path);
 uint16_t UsbLibrary_GetCount(void);

@@ -54,31 +54,17 @@ void UsbLibrary_Finish(void)
         fclose(g_IndexFile);
         g_IndexFile = NULL;
     }
-
     uint32_t currentPrint = g_CurrentCrc ^ 0xFFFFFFFF;
-
-    ESP_LOGI(TAG, "Tracks: %u", g_TrackCount);
-    
     uint32_t fingerprint = NvsManager_GetFingerprint();
     if(fingerprint != 0){
         if(currentPrint != fingerprint){
-            ESP_LOGI( TAG, "Library changed");
+            ESP_LOGI(TAG, "Library changed");
             SavedTrack = 0;
             SavedPage = 0;
         }
-        else{
-            uint16_t nvsTrack = NvsManager_GetTrack();
-            uint8_t track = UsbLibrary_GetVirtualPage(nvsTrack);
-            uint8_t page = UsbLibrary_GetVirtualTrack(nvsTrack);
-            ESP_LOGI(TAG, "Saved track from NVS: %u, page: %u", track, page);
-            UsbLibrary_SetSavedPage(page);
-            UsbLibrary_SetSavedTrack(track);
-            //UsbLibrary_SetSavedPage(UsbLibrary_GetVirtualPage(nvsTrack));
-            //UsbLibrary_SetSavedTrack(UsbLibrary_GetVirtualTrack(nvsTrack));
-        }
+        else
+            UsbPlayer_SetResumeState();
     }
-    NvsManager_SetFingerprint(currentPrint);
-    NvsManager_Commit();
 }
 
 bool UsbLibrary_IsSupportedFile(const char *path)
@@ -220,4 +206,7 @@ uint8_t UsbLibrary_GetVirtualPage(uint16_t realTrack){
 }
 uint16_t UsbLibrary_GetRealTrackByPosition(uint8_t page, uint8_t track){
     return page * TRACKS_PER_PAGE + track;
+}
+uint32_t UsbLibrary_GetCurrentFingerprint(void){
+    return g_CurrentCrc ^ 0xFFFFFFFF;
 }

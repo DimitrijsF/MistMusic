@@ -3,6 +3,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+void UsbPlayer_SetResumeState(void);
+
 void UsbPlayer_SwitchTrack(uint8_t track);
 void UsbPlayer_Play(void);
 void UsbPlayer_Stop(void);

@@ -10,7 +10,6 @@ typedef struct
 } PlayStatus;
 
 void PlayerManager_Init(void);
-void PlayerManager_SaveState(void);
 
 void PlayerManager_SourceIn(void);
 void PlayerManager_UsbReady(void);

@@ -10,12 +10,14 @@
 #include "esp_random.h"
 
 #include <cdc/cdc_protocol.h>
+#include <cdc/cdc_state.h>
 #include <usbPlayer.h>
 #include <usbLibrary.h>
 #include <usbState.h>
 #include <media/mediaOutput.h>
 #include <usbDecoder.h>
 #include <manager/playerManager.h>
+#include <manager/nvsManager.h>
 
 static uint8_t CurrentPage = 0;
 static uint8_t CurrentTrack = 1;
@@ -37,6 +39,7 @@ static const char* TAG = "USB_PLAYER";
 
 static void PlayerTask(void *arg);
 static TaskHandle_t playerTaskHandle = NULL;
+static void UsbPlayer_SavePlayerState(void);
 
 uint16_t Player_GetRealTrackByPosition(uint8_t page, uint8_t track){
     return page * TRACKS_PER_PAGE + track;
@@ -298,6 +301,7 @@ normal_exit:
     ResumePosition = Decoder_GetPosition();
     ResumeTrack = Player_GetRealTrack();
     ResumeSeconds = PlayedSeconds;
+    UsbPlayer_SavePlayerState();
     goto common_exit;
 error_exit:
     ResumePosition = -1;
@@ -382,4 +386,27 @@ uint8_t UsbPlayer_GetCurrentTrack(void){
 }
 uint8_t UsbPlayer_GetCurrentPage(void){
     return CurrentPage;
+}
+void UsbPlayer_SetResumeState(void){
+    ResumePosition = NvsManager_GetResumePosition();
+    ResumeSeconds = NvsManager_GetResumeSeconds();
+    ResumeTrack = NvsManager_GetTrack();
+    uint8_t vPage = UsbLibrary_GetVirtualPage(ResumeTrack);
+    uint8_t vTrack = UsbLibrary_GetVirtualTrack(ResumeTrack);
+    UsbLibrary_SetSavedPage(vPage);
+    UsbLibrary_SetSavedTrack(vTrack);
+    CurrentPage = vPage;
+    CurrentTrack = vTrack;
+}
+static void UsbPlayer_SavePlayerState(void){
+    NvsManager_SetTrack(UsbLibrary_GetRealTrackByPosition(CurrentPage, CurrentTrack));
+    NvsManager_SetRandom(UsbState_GetUsbRandom());
+    NvsManager_SetResumeSeconds(ResumeSeconds);
+    NvsManager_SetResumePosition(ResumePosition);
+    NvsManager_SetFingerprint(UsbLibrary_GetCurrentFingerprint());
+    if(CdcState_GetCdcState() == CDC_NOCD)
+        NvsManager_SetDiskIn(false);
+    else
+        NvsManager_SetDiskIn(true);
+    NvsManager_Commit();
 }

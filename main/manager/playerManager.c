@@ -32,14 +32,12 @@ void PlayerManager_SourceIn(void){
     }
 }
 void PlayerManager_UsbReady(void){
-    ESP_LOGI(TAG, "cdc state on usb ready %d", CdcState_GetCdcState());
     if(CdcState_GetCdcState() == CDC_LOADING){
         CdcProtocol_CompleteLoad();
         CdcState_CdcStopPlay();
     }
     if(UsbLibrary_GetCount() > 0){
         ESP_LOGI(TAG, "Usb ready");
-        ESP_LOGI(TAG, "cdc state %d", CdcState_GetCdcState());
         if(CdcState_GetCdcState() == CDC_PLAY){
             UsbPlayer_Play();
         }
@@ -71,6 +69,8 @@ void PlayerManager_ProcessEject(void){
 void PlayerManager_CompleteEject(void){
     UsbState_Eject();
     CdcState_CdcNoDisk();
+    NvsManager_SetDiskIn(false);
+    NvsManager_Commit();
 }
 void PlayerManager_SendCurrentStatus(void){
     UsbPlayer_SendCurrentStatus();
@@ -88,15 +88,6 @@ void PlayerManager_Init(void){
     WifiService_Init();
     WifiService_Start();
 }
-void PlayerManager_SaveState(void){
-    NvsManager_SetTrack(UsbLibrary_GetRealTrackByPosition(UsbPlayer_GetCurrentPage(), UsbPlayer_GetCurrentTrack()));
-    NvsManager_SetRandom(UsbState_GetUsbRandom());
-    if(CdcState_GetCdcState() == CDC_NOCD)
-        NvsManager_SetDiskIn(false);
-    else
-        NvsManager_SetDiskIn(true);
-    NvsManager_Commit();
-}
 #pragma endregion
 void PlayerManager_Play(void){
     ESP_LOGI(TAG, "PLAY called");
@@ -109,7 +100,6 @@ void PlayerManager_Stop(void){
     ESP_LOGI(TAG, "STOP called");
     if(CdcState_GetCdcState() == CDC_PLAY){
         UsbPlayer_Stop();         
-        PlayerManager_SaveState();
     }
     CdcState_CdcStopPlay();
 }

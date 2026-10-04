@@ -51,7 +51,6 @@ void CdcState_CdcPlay(void){
 void CdcState_CdcStopPlay(void){
     if(State != CDC_NOCD)
         SetCdcState(CDC_STOP);
-    SetCdcState(CDC_STOP);
 }
 void CdcState_CdcEjectStart(void){
     SetCdcState(CDC_EJECTING);

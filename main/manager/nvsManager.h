@@ -16,4 +16,10 @@ bool NvsManager_SetDiskIn(bool diskIn);
 uint32_t NvsManager_GetFingerprint(void);
 bool NvsManager_SetFingerprint(uint32_t fingerprint);
 
+uint32_t NvsManager_GetResumeSeconds(void);
+bool NvsManager_SetResumeSeconds(uint32_t seconds);
+
+long NvsManager_GetResumePosition(void);
+bool NvsManager_SetResumePosition(long position);
+
 bool NvsManager_Commit(void);
