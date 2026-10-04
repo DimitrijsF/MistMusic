@@ -186,7 +186,7 @@ connections and installation, feel free to contact the author directly.
 
 ## Development Status
 
-**Version 1.0 — working release**
+**Version 1.5 — working release**
 
 The core USB MP3 playback functionality has been implemented and tested with
 the Blaupunkt CD30 MP3.
