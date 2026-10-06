@@ -54,6 +54,7 @@ void UsbLibrary_Finish(void)
         fclose(g_IndexFile);
         g_IndexFile = NULL;
     }
+    ESP_LOGI(TAG, "Track count %u", g_TrackCount);
     uint32_t currentPrint = g_CurrentCrc ^ 0xFFFFFFFF;
     uint32_t fingerprint = NvsManager_GetFingerprint();
     if(fingerprint != 0){

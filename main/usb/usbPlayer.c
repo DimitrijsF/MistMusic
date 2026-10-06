@@ -296,6 +296,7 @@ static void PlayerTask(void *arg)
                 continue;
             }
         }
+        vTaskDelay(1);
     }
 normal_exit:
     ResumePosition = Decoder_GetPosition();

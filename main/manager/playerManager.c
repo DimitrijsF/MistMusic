@@ -93,8 +93,11 @@ void PlayerManager_Play(void){
     ESP_LOGI(TAG, "PLAY called");
     UsbState usb = UsbState_GetState();
     if(usb == USB_STOP || usb == USB_PLAY)
+    {
         UsbPlayer_Play();
-    CdcState_CdcPlay();
+        CdcState_CdcPlay();
+        UsbState_Play();
+    }
 }
 void PlayerManager_Stop(void){
     ESP_LOGI(TAG, "STOP called");
