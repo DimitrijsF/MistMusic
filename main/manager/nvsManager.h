@@ -22,4 +22,7 @@ bool NvsManager_SetResumeSeconds(uint32_t seconds);
 long NvsManager_GetResumePosition(void);
 bool NvsManager_SetResumePosition(long position);
 
+bool NvsManager_GetPlaylist(char *playlist, size_t size);
+bool NvsManager_SetPlaylist(const char *name);
+
 bool NvsManager_Commit(void);

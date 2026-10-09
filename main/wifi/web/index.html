@@ -18,15 +18,24 @@
             margin-bottom: 30px;
         }
 
-        button {
-            width: 100%;
-            padding: 14px;
+        label {
+            display: block;
             font-size: 18px;
-            margin-bottom: 25px;
         }
 
-        label {
+        select {
+            width: 100%;
+            padding: 12px;
             font-size: 18px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+        }
+
+        #playlistInfo {
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: #666;
+            font-size: 14px;
         }
 
         input[type="checkbox"] {
@@ -42,6 +51,14 @@
 
     <h1>MistMusic</h1>
 
+    <label for="playlistSelect">Playlist</label>
+
+    <select id="playlistSelect" onchange="playlistChanged()">
+        <option value="0">All tracks</option>
+    </select>
+
+    <p id="playlistInfo"></p>
+
     <label>
         <input type="checkbox" id="randomPlayback" onchange="randomChanged()">
         Random Playback
@@ -50,7 +67,12 @@
     <script>
         function loadState() {
             fetch('/state')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok)
+                        throw new Error('HTTP ' + response.status);
+
+                    return response.json();
+                })
                 .then(state => {
                     document.getElementById('randomPlayback').checked = state.random;
                 })
@@ -64,12 +86,87 @@
             var value = enabled ? 1 : 0;
 
             fetch('/random?value=' + value)
+                .then(response => {
+                    if (!response.ok)
+                        throw new Error('HTTP ' + response.status);
+                })
                 .catch(error => {
                     console.log('Failed to update random playback:', error);
                 });
         }
 
+        function loadPlaylists() {
+            fetch('/playlists')
+                .then(response => {
+                    if (!response.ok)
+                        throw new Error('HTTP ' + response.status);
+
+                    return response.json();
+                })
+                .then(data => {
+                    var select = document.getElementById('playlistSelect');
+
+                    select.innerHTML = '';
+
+                    data.playlists.forEach(function (playlist) {
+                        var option = document.createElement('option');
+
+                        option.value = playlist.index;
+                        option.textContent = playlist.name;
+
+                        select.appendChild(option);
+                    });
+
+                    select.value = data.current;
+
+                    updatePlaylistInfo(data);
+                })
+                .catch(error => {
+                    console.log('Failed to load playlists:', error);
+                });
+        }
+
+        function playlistChanged() {
+            var select = document.getElementById('playlistSelect');
+            var index = select.value;
+
+            fetch('/playlist?index=' + encodeURIComponent(index))
+                .then(response => {
+                    if (!response.ok)
+                        throw new Error('HTTP ' + response.status);
+
+                    return fetch('/playlists');
+                })
+                .then(response => {
+                    if (!response.ok)
+                        throw new Error('HTTP ' + response.status);
+
+                    return response.json();
+                })
+                .then(data => {
+                    select.value = data.current;
+                    updatePlaylistInfo(data);
+                })
+                .catch(error => {
+                    console.log('Failed to select playlist:', error);
+                    loadPlaylists();
+                });
+        }
+
+        function updatePlaylistInfo(data) {
+            var select = document.getElementById('playlistSelect');
+            var index = select.value;
+
+            var playlist = data.playlists.find(function (item) {
+                return String(item.index) === String(index);
+            });
+
+            document.getElementById('playlistInfo').textContent =
+                playlist ? playlist.trackCount + ' tracks' : '';
+        }
+
         loadState();
+        loadPlaylists();
     </script>
 
 </body>

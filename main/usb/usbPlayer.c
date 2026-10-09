@@ -373,7 +373,6 @@ void UsbPlayer_SetCurrentTrackPage(uint8_t track, uint8_t page){
 void UsbPlayer_SaveCurrentTrackPage(void){
     if(!StateSaved)
     {
-        ESP_LOGI(TAG, "Saving current track: %u, page: %u", CurrentTrack, CurrentPage);
         UsbLibrary_SetSavedPage(CurrentPage);
         UsbLibrary_SetSavedTrack(CurrentTrack);
         StateSaved = true;
@@ -392,6 +391,15 @@ void UsbPlayer_SetResumeState(void){
     ResumePosition = NvsManager_GetResumePosition();
     ResumeSeconds = NvsManager_GetResumeSeconds();
     ResumeTrack = NvsManager_GetTrack();
+    char playlist[64];
+    if (NvsManager_GetPlaylist(playlist, sizeof(playlist))){
+        if (strcmp(playlist, "none") == 0)
+            UsbLibrary_SetAllTracks();
+        else
+            UsbLibrary_SetCurrentPlaylistByName(playlist);
+    }
+    else
+        UsbLibrary_SetAllTracks();
     uint8_t vPage = UsbLibrary_GetVirtualPage(ResumeTrack);
     uint8_t vTrack = UsbLibrary_GetVirtualTrack(ResumeTrack);
     UsbLibrary_SetSavedPage(vPage);
@@ -405,6 +413,13 @@ static void UsbPlayer_SavePlayerState(void){
     NvsManager_SetResumeSeconds(ResumeSeconds);
     NvsManager_SetResumePosition(ResumePosition);
     NvsManager_SetFingerprint(UsbLibrary_GetCurrentFingerprint());
+    UsbPlaylist *currentList = UsbLibrary_GetCurrentPlaylist();
+    if(currentList == NULL){
+        NvsManager_SetPlaylist("none");
+    }
+    else{
+        NvsManager_SetPlaylist(currentList->name);
+    }
     if(CdcState_GetCdcState() == CDC_NOCD)
         NvsManager_SetDiskIn(false);
     else

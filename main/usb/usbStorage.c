@@ -3,6 +3,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "usb/msc_host.h"
 #include "usb/msc_host_vfs.h"
@@ -94,23 +95,16 @@ static void UsbStorage_ScanDirectory(const char *path)
 {
     DIR *dir = opendir(path);
 
-    if (dir == NULL)
-    {
-        ESP_LOGE(TAG,
-                 "Cannot open directory: %s",
-                 path);
+    if (dir == NULL){
+        ESP_LOGE(TAG, "Cannot open directory: %s", path);
         return;
     }
 
     struct dirent *entry;
 
-    while ((entry = readdir(dir)) != NULL)
-    {
-        if (strcmp(entry->d_name, ".") == 0 ||
-            strcmp(entry->d_name, "..") == 0)
-        {
+    while ((entry = readdir(dir)) != NULL){
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
-        }
 
         char fullPath[512];
 
@@ -134,10 +128,7 @@ static void UsbStorage_ScanDirectory(const char *path)
         {
             UsbStorage_ScanDirectory(fullPath);
         }
-        else if(UsbLibrary_IsSupportedFile(fullPath))
-        {
-            UsbLibrary_AddTrack(fullPath);
-        }
+        UsbLibrary_ProcessFile(fullPath);
     }
 
     closedir(dir);
@@ -183,7 +174,6 @@ static void UsbStorageTask(void *arg){
         {
             g_EjectRequested = false;
             UsbPlayer_Stop();
-            UsbLibrary_Clear();
             if (g_Vfs != NULL)
             {
                 msc_host_vfs_unregister(g_Vfs);
@@ -204,7 +194,6 @@ static void UsbStorageTask(void *arg){
         {
             g_DeviceDisconnectRequested = false;
             UsbPlayer_Stop();
-
             if (g_Vfs != NULL)
             {
                 msc_host_vfs_unregister(g_Vfs);
@@ -220,7 +209,6 @@ static void UsbStorageTask(void *arg){
             g_DeviceInstalled = false;
             g_DeviceAddress = 0;
 
-            UsbLibrary_Clear();
             ESP_LOGI(TAG, "USB storage disconnected");
         }
         if (g_DeviceConnected && !g_DeviceInstalled)
@@ -281,4 +269,24 @@ void UsbStorageEject(void){
 }
 bool UsbStorage_DriveIn(void){
     return g_DeviceInstalled;
+}
+bool UsbStorage_FileExists(const char *path)
+{
+    if (path == NULL || path[0] == '\0')
+        return false;
+
+    FILE *file = fopen(path, "rb");
+
+    if (file == NULL)
+        return false;
+
+    fclose(file);
+    return true;
+}
+FILE *UsbStorage_OpenFile(const char *path)
+{
+    if (path == NULL || path[0] == '\0')
+        return NULL;
+
+    return fopen(path, "rb");
 }

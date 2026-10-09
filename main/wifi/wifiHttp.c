@@ -1,10 +1,13 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "esp_log.h"
 #include "esp_http_server.h"
 
 #include "wifiHttp.h"
 #include <usb/usbState.h>
+#include <usb/usbLibrary.h>
 
 static const char *TAG = "WIFI_HTTP";
 
@@ -90,6 +93,103 @@ static esp_err_t RandomHandler(httpd_req_t *req)
     httpd_resp_sendstr(req, "OK");
     return ESP_OK;
 }
+static esp_err_t PlaylistsHandler(httpd_req_t *req)
+{
+    ESP_LOGI(TAG, "GET /playlists");
+
+    const UsbPlaylist *playlists = UsbLibrary_GetPlaylists();
+    uint16_t count = UsbLibrary_GetPlaylistCount();
+
+    char response[2048];
+    size_t pos = 0;
+
+    int written = snprintf(
+        response,
+        sizeof(response),
+        "{\"playlists\":[{\"index\":0,\"name\":\"All tracks\",\"trackCount\":%u}",
+        (unsigned int)UsbLibrary_GetCount()
+    );
+
+    if (written < 0 || (size_t)written >= sizeof(response))
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Response too large");
+
+    pos = (size_t)written;
+
+    for (uint16_t i = 0; i < count; i++)
+    {
+        written = snprintf(
+            response + pos,
+            sizeof(response) - pos,
+            ",{\"index\":%u,\"name\":\"%s\",\"trackCount\":%lu}",
+            (unsigned int)(i + 1),
+            playlists[i].name,
+            (unsigned long)playlists[i].trackCount
+        );
+
+        if (written < 0 || (size_t)written >= sizeof(response) - pos)
+            return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Response too large");
+
+        pos += (size_t)written;
+    }
+
+    written = snprintf(
+        response + pos,
+        sizeof(response) - pos,
+        "],\"current\":%u}",
+        (unsigned int)UsbLibrary_GetCurrentPlaylistIndex()
+    );
+
+    if (written < 0 || (size_t)written >= sizeof(response) - pos)
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Response too large");
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+
+    return ESP_OK;
+}
+static esp_err_t PlaylistHandler(httpd_req_t *req)
+{
+    char query[32];
+
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK)
+    {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing index");
+        return ESP_FAIL;
+    }
+
+    char value[8];
+
+    if (httpd_query_key_value(query, "index", value, sizeof(value)) != ESP_OK)
+    {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing index");
+        return ESP_FAIL;
+    }
+
+    char *end = NULL;
+    unsigned long index = strtoul(value, &end, 10);
+
+    if (end == value || *end != '\0' || index > UINT16_MAX)
+    {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid index");
+        return ESP_FAIL;
+    }
+
+    if (index == 0)
+    {
+        UsbLibrary_SetAllTracks();
+    }
+    else
+    {
+        if (!UsbLibrary_SetCurrentPlayList((uint8_t)(index - 1)))
+        {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Playlist not found");
+            return ESP_FAIL;
+        }
+    }
+
+    httpd_resp_sendstr(req, "OK");
+    return ESP_OK;
+}
 void WifiHttp_Start(void)
 {
     if (s_httpServer != NULL)
@@ -97,6 +197,7 @@ void WifiHttp_Start(void)
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.task_priority = 7;
+    config.stack_size = 6144;
 
     ESP_ERROR_CHECK(
         httpd_start(&s_httpServer, &config)
@@ -127,6 +228,28 @@ void WifiHttp_Start(void)
         .user_ctx = NULL
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(s_httpServer, &random));
+
+    httpd_uri_t playlists = {
+    .uri = "/playlists",
+    .method = HTTP_GET,
+    .handler = PlaylistsHandler,
+    .user_ctx = NULL
+    };
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(s_httpServer, &playlists)
+    );
+
+    httpd_uri_t playlist = {
+        .uri = "/playlist",
+        .method = HTTP_GET,
+        .handler = PlaylistHandler,
+        .user_ctx = NULL
+    };
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(s_httpServer, &playlist)
+);
     
     ESP_LOGI(TAG, "HTTP server started");
 }

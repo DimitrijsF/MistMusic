@@ -17,6 +17,7 @@ static const char *TAG = "NVS_MANAGER";
 #define KEY_FINGERPRINT "fingerprint"
 #define KEY_SECONDS "playedSeconds"
 #define KEY_POSITION "trackPosition"
+#define KEY_PLAYLIST "playlist"
 
 static nvs_handle_t NvsHandle = 0;
 static bool IsInitialized = false;
@@ -187,11 +188,44 @@ uint32_t NvsManager_GetFingerprint(void){
     return fingerprint;
 }
 bool NvsManager_SetFingerprint(uint32_t fingerprint){
-     if (!IsInitialized)
+    if (!IsInitialized)
         return false;
     esp_err_t err = nvs_set_u32(NvsHandle, KEY_FINGERPRINT, fingerprint);
     if (err != ESP_OK){
         ESP_LOGE(TAG, "Failed to set fingerprint: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+bool NvsManager_SetPlaylist(const char *name){
+    if (!IsInitialized)
+        return false;
+    if (name == NULL)
+        name = "";
+    esp_err_t err = nvs_set_str(NvsHandle, KEY_PLAYLIST, name);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set playlist: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+bool NvsManager_GetPlaylist(char *playlist, size_t size){
+    if (playlist == NULL || size == 0)
+        return false;
+
+    playlist[0] = '\0';
+    if (!IsInitialized)
+        return false;
+    size_t requiredSize = size;
+    esp_err_t err = nvs_get_str(NvsHandle, KEY_PLAYLIST, playlist, &requiredSize);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
+        ESP_LOGI(TAG, "Playlist not found, using all tracks");
+        playlist = "none";
+        return true;
+    }
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read playlist: %s", esp_err_to_name(err));
+        playlist = "none";
         return false;
     }
     return true;
