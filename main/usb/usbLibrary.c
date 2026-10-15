@@ -21,6 +21,7 @@ static uint32_t CurrentCrc = 0xFFFFFFFF;
 static bool IsEmpty = true;
 static uint8_t SavedTrack = 0;
 static uint8_t SavedPage = 0;
+static uint8_t errno = 0;
 
 static UsbTrack CurrentTrack;
 static uint16_t TotalTrackCount = 0;
@@ -35,15 +36,25 @@ static void UsbLibrary_AddTrack(const char *path);
 static void UsbLibrary_AddPlayList(const char *path);
 static UsbFileType UsbLibrary_GetFileType(const char *path);
 
-bool UsbLibrary_Begin(void)
-{
+bool UsbLibrary_Begin(void){
     TotalTrackCount = 0;
     IsEmpty = true;
     CurrentCrc = 0xFFFFFFFF;
+    errno = 0;
     IndexFile = fopen(MEDIA_LIBRARY_INDEX_PATH, "wb");
-    if(IndexFile == NULL){
-        ESP_LOGE(TAG, "Cannot create index");
-        return false;
+    if (IndexFile == NULL){
+        int error = errno;
+        ESP_LOGW(TAG, "Cannot open index: errno=%d (%s). Trying to remove it.", error, strerror(error));
+        if (remove(MEDIA_LIBRARY_INDEX_PATH) != 0){
+            ESP_LOGE(TAG, "Cannot remove index: errno=%d (%s)", errno, strerror(errno));
+            return false;
+        }
+        ESP_LOGW(TAG, "Old index removed. Creating a new one.");
+        IndexFile = fopen(MEDIA_LIBRARY_INDEX_PATH, "wb");
+        if (IndexFile == NULL){
+            ESP_LOGE(TAG, "Cannot recreate index: errno=%d (%s)", errno, strerror(errno));
+            return false;
+        }
     }
     return true;
 }
