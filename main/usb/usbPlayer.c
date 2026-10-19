@@ -89,7 +89,9 @@ void UsbPlayer_SwitchTrack(uint8_t track)
 
     if(UsbState_GetUsbRandom()){
         if(track > CurrentTrack){
-            uint32_t randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
+            uint32_t randomRealTrack = Player_GetRealTrackByPosition(CurrentPage, CurrentTrack);
+            while(randomRealTrack == Player_GetRealTrackByPosition(CurrentPage, CurrentTrack))
+                randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
             requestedPage = UsbLibrary_GetVirtualPage(randomRealTrack);
             requestedTrack = UsbLibrary_GetVirtualTrack(randomRealTrack);
         }
