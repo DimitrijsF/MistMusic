@@ -107,27 +107,15 @@ static void UsbStorage_ScanDirectory(const char *path)
             continue;
 
         char fullPath[512];
-
-        snprintf(fullPath,
-                 sizeof(fullPath),
-                 "%s/%s",
-                 path,
-                 entry->d_name);
-
+        snprintf(fullPath, sizeof(fullPath), "%s/%s", path, entry->d_name);
         struct stat st;
-
-        if (stat(fullPath, &st) != 0)
-        {
-            ESP_LOGW(TAG,
-                     "stat() failed: %s",
-                     fullPath);
+        if (stat(fullPath, &st) != 0){
+            ESP_LOGW(TAG, "stat() failed: %s", fullPath);
             continue;
         }
-
         if (S_ISDIR(st.st_mode))
-        {
             UsbStorage_ScanDirectory(fullPath);
-        }
+            
         UsbLibrary_ProcessFile(fullPath);
     }
 
@@ -149,19 +137,13 @@ static esp_err_t UsbStorage_ReadFS(void){
         &mountConfig,
         &g_Vfs);
 
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG,
-         "Failed to mount filesystem: %d",
-         err);
-
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to mount filesystem: %d", err);
         return err;
     }
 
-    ESP_LOGI(TAG,
-         "Filesystem mounted at /usb");
-    if(!UsbLibrary_Begin())
-        return ESP_FAIL;
+    ESP_LOGI(TAG, "Filesystem mounted at /usb");
+    UsbLibrary_Begin();
     UsbStorage_ScanDirectory("/usb");
     UsbLibrary_Finish();
     return ESP_OK;
@@ -227,6 +209,9 @@ static void UsbStorageTask(void *arg){
                 UsbStorage_ReadFS();
             PlayerManager_UsbReady();
             UsbState_Stop();
+            //TODO DEBUG
+            PlayerManager_Play();
+            //
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));

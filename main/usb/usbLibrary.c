@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include "esp_heap_caps.h"
 
 #include "esp_log.h"
 #include <manager/playerManager.h>
@@ -10,18 +11,19 @@
 #include <usbLibrary.h>
 #include <usbPlayer.h>
 #include <usbStorage.h>
+#include <usbBuffer.h>
+
+#include <errno.h>
 
 #define MEDIA_LIBRARY_INDEX_PATH "/usb/cd30_index"
 #define USB_LIBRARY_MAX_PLAYLISTS 32
 
 static const char* TAG = "USB_LIBRARY";
 
-static FILE *IndexFile = NULL;
 static uint32_t CurrentCrc = 0xFFFFFFFF;
 static bool IsEmpty = true;
 static uint8_t SavedTrack = 0;
 static uint8_t SavedPage = 0;
-static uint8_t errno = 0;
 
 static UsbTrack CurrentTrack;
 static uint16_t TotalTrackCount = 0;
@@ -35,44 +37,34 @@ static uint32_t UsbLibrary_UpdateCrc32(uint32_t crc, const uint8_t *data, size_t
 static void UsbLibrary_AddTrack(const char *path);
 static void UsbLibrary_AddPlayList(const char *path);
 static UsbFileType UsbLibrary_GetFileType(const char *path);
+static bool UsbLibrary_NeedNewIndex(const UsbTrackIndexBuffer *buffer, const char *path);
 
-bool UsbLibrary_Begin(void){
+void UsbLibrary_Begin(void){
     TotalTrackCount = 0;
     IsEmpty = true;
     CurrentCrc = 0xFFFFFFFF;
-    errno = 0;
-    IndexFile = fopen(MEDIA_LIBRARY_INDEX_PATH, "wb");
-    if (IndexFile == NULL){
-        int error = errno;
-        ESP_LOGW(TAG, "Cannot open index: errno=%d (%s). Trying to remove it.", error, strerror(error));
-        if (remove(MEDIA_LIBRARY_INDEX_PATH) != 0){
-            ESP_LOGE(TAG, "Cannot remove index: errno=%d (%s)", errno, strerror(errno));
-            return false;
-        }
-        ESP_LOGW(TAG, "Old index removed. Creating a new one.");
-        IndexFile = fopen(MEDIA_LIBRARY_INDEX_PATH, "wb");
-        if (IndexFile == NULL){
-            ESP_LOGE(TAG, "Cannot recreate index: errno=%d (%s)", errno, strerror(errno));
-            return false;
-        }
-    }
-    return true;
+    UsbBuffer_Init(&mainBuffer);
 }
-void UsbLibrary_Finish(void){
-    if(IndexFile != NULL){
-        fclose(IndexFile);
-        IndexFile = NULL;
+void UsbLibrary_Finish(void) {
+    if (UsbLibrary_NeedNewIndex(&mainBuffer, MEDIA_LIBRARY_INDEX_PATH)) {
+        if (!UsbBuffer_Save(&mainBuffer, MEDIA_LIBRARY_INDEX_PATH)) {
+            ESP_LOGE(TAG, "Failed to save main library index");
+        }
     }
+    else
+        ESP_LOGI(TAG, "Main library index unchanged");
+
+    UsbBuffer_Free(&mainBuffer);
     ESP_LOGI(TAG, "Track count %u", TotalTrackCount);
     uint32_t currentPrint = CurrentCrc ^ 0xFFFFFFFF;
     uint32_t fingerprint = NvsManager_GetFingerprint();
-    if(fingerprint != 0){
-        if(currentPrint != fingerprint){
+    if (fingerprint != 0) {
+        if (currentPrint != fingerprint) {
             ESP_LOGI(TAG, "Library changed");
             SavedTrack = 0;
             SavedPage = 0;
         }
-        else
+        else 
             UsbPlayer_SetResumeState();
     }
 }
@@ -119,23 +111,13 @@ static void UsbLibrary_AddPlayList(const char *path){
     }
     memcpy(list.name, fileName, nameLength);
     list.name[nameLength] = '\0';
-    int result = snprintf(
-        list.indexPath,
-        sizeof(list.indexPath),
-        "%.*s.idx",
-        (int)(ext - path),
-        path);
+    int result = snprintf(list.indexPath, sizeof(list.indexPath), "%.*s.idx", (int)(ext - path), path);
     if (result < 0 || (size_t)result >= sizeof(list.indexPath)){
         ESP_LOGW(TAG, "Playlist index path is too long: %s", path);
         fclose(file);
         return;
     }
-    FILE *plstIndex = fopen(list.indexPath, "wb");
-    if (plstIndex == NULL){
-        ESP_LOGE(TAG, "Cannot create playlist index: %s", list.indexPath);
-        fclose(file);
-        return;
-    }
+    UsbBuffer_Init(&plstBuffer);
     char line[sizeof(((UsbTrack *)0)->Path)];
     bool success = true;
     while (true){
@@ -148,7 +130,6 @@ static void UsbLibrary_AddPlayList(const char *path){
         }
         size_t length = strlen(line);
 
-        // Если строка не поместилась целиком, пропускаем её.
         if (length > 0 && line[length - 1] != '\n' && !feof(file)){
             int ch;
             while ((ch = fgetc(file)) != '\n' && ch != EOF){}
@@ -166,51 +147,52 @@ static void UsbLibrary_AddPlayList(const char *path){
         UsbTrack track = {0};
         strncpy(track.Path, line, sizeof(track.Path) - 1);
 
-        if (fwrite(&track, sizeof(UsbTrack), 1, plstIndex) != 1){
-            ESP_LOGE(TAG, "Failed to write playlist index: %s", list.indexPath);
+        if(!UsbBuffer_Add(&plstBuffer, &track)){
+            ESP_LOGE(TAG, "Failed to write playlist to buffer: %s", list.playlistPath);
             success = false;
             break;
         }
         list.trackCount++;
     }
 
-    if (fclose(plstIndex) != 0){
-        ESP_LOGE(TAG, "Failed to close playlist index: %s", list.indexPath);
-        success = false;
-    }
     fclose(file);
     if (!success){
         remove(list.indexPath);
+        UsbBuffer_Free(&plstBuffer);
         return;
     }
     if (list.trackCount == 0){
         ESP_LOGW(TAG, "Playlist contains no valid tracks: %s", path);
         remove(list.indexPath);
+        UsbBuffer_Free(&plstBuffer);
         return;
     }
+    if(UsbLibrary_NeedNewIndex(&plstBuffer, list.indexPath))
+    {
+        if(!UsbBuffer_Save(&plstBuffer, list.indexPath)){
+            ESP_LOGE(TAG, "Playlist index saving failed: %s", path);
+            remove(list.indexPath);
+            UsbBuffer_Free(&plstBuffer);
+            return;
+        }
+    }
+    ESP_LOGI(TAG, "Index saved: %s", list.indexPath);
+    UsbBuffer_Free(&plstBuffer);
     PlayLists[PlayListCount] = list;
     PlayListCount++;
-    ESP_LOGI(
-        TAG,
-        "Playlist added: %s, tracks: %lu",
-        list.name,
-        (unsigned long)list.trackCount);
+    ESP_LOGI(TAG, "Playlist added: %s, tracks: %lu", list.name, (unsigned long)list.trackCount);
 }
 static void UsbLibrary_AddTrack(const char *path)
 {
-    if(IndexFile == NULL)
-        return;
     UsbTrack track = {0};
     strncpy(track.Path, path, sizeof(track.Path) - 1);
     CurrentCrc = UsbLibrary_UpdateCrc32(CurrentCrc, (const uint8_t *)track.Path, strlen(track.Path));
     const uint8_t separator = 0;
     CurrentCrc = UsbLibrary_UpdateCrc32(CurrentCrc, &separator, sizeof(separator));
-    if(fwrite(&track, sizeof(UsbTrack), 1, IndexFile) != 1){
-        ESP_LOGE(TAG, "Failed to write index");
-        return;
+    if(UsbBuffer_Add(&mainBuffer, &track)){
+        TotalTrackCount++;
+        IsEmpty = false;
     }
-    TotalTrackCount++;
-    IsEmpty = false;
 }
 
 void UsbLibrary_Clear(void){
@@ -326,6 +308,9 @@ void UsbLibrary_SetAllTracks(void){
     ESP_LOGI(TAG, "Selected full library");
 }
 static UsbFileType UsbLibrary_GetFileType(const char *path){
+    if (path == NULL || path[0] == '\0')
+        return OTHER;
+
     const char *ext = strrchr(path, '.');
     if (ext == NULL)
         return OTHER;
@@ -358,4 +343,38 @@ void UsbLibrary_SetCurrentPlaylistByName(const char *name){
     }
     ESP_LOGW(TAG, "Playlist not found: %s", name);
     CurrentPlaylist = NULL;
+}
+static bool UsbLibrary_NeedNewIndex(const UsbTrackIndexBuffer *buffer, const char *path){
+    ESP_LOGI(TAG, "Comparing index files: path=%s", path);
+    if (buffer == NULL || path == NULL){
+        ESP_LOGE(TAG, "Index comparing error. Buffer of path is NULL");
+        return false;
+    }
+    ESP_LOGI(TAG, "Opening file");
+    FILE *file = UsbStorage_OpenFile(path);
+    if (file == NULL) {
+        ESP_LOGW(TAG, "Cannot open index file: %s. Will be created new one", path);
+        return true;
+    }
+    ESP_LOGI(TAG, "Seeking file");
+    if (fseek(file, 0, SEEK_END) != 0){
+        ESP_LOGW(TAG, "Index file fseek failed");
+        fclose(file);
+        return true;
+    }
+    ESP_LOGI(TAG, "Checking file size to zero");
+    long fileSize = ftell(file);
+    if (fileSize < 0){
+        ESP_LOGW(TAG, "Index file size < 0");
+        fclose(file);
+        return true;
+    }    
+    ESP_LOGI(TAG, "Checking file size to new index");
+    size_t expectedSize = buffer->Count * sizeof(UsbTrack);
+    if ((unsigned long)fileSize != (unsigned long)expectedSize){
+        ESP_LOGI(TAG, "Index file size is not equals to new. Will be created.");
+        fclose(file);
+        return true;
+    }
+    return false;
 }

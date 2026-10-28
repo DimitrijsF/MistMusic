@@ -132,7 +132,9 @@ static bool Player_CalcNextTrack(
 
     if(UsbState_GetUsbRandom())
     {
-        uint16_t randomRealTrack = (esp_random() % trackCount) + 1;
+        uint32_t randomRealTrack = Player_GetRealTrackByPosition(CurrentPage, CurrentTrack);
+            while(randomRealTrack == Player_GetRealTrackByPosition(CurrentPage, CurrentTrack))
+                randomRealTrack = (esp_random() % UsbLibrary_GetCount()) + 1;
 
         *nextPage = UsbLibrary_GetVirtualPage(randomRealTrack);
         *nextTrack = UsbLibrary_GetVirtualTrack(randomRealTrack);

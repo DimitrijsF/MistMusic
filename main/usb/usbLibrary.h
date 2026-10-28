@@ -5,6 +5,13 @@
 
 #define TRACKS_PER_PAGE 99
 #define VIRTUAL_TRACK_COUNT 100
+#define USB_INDEX_BUFFER_GROWTH_STEP 32
+
+typedef enum{
+    MEDIA,
+    PLAYLIST,
+    OTHER
+} UsbFileType;
 
 typedef struct{
     char Path[256];
@@ -12,12 +19,6 @@ typedef struct{
     uint32_t SampleRate;
     uint8_t Channels;
 } UsbTrack;
-
-typedef enum{
-    MEDIA,
-    PLAYLIST,
-    OTHER
-} UsbFileType;
 
 typedef struct
 {
@@ -27,7 +28,7 @@ typedef struct
     uint32_t trackCount;
 } UsbPlaylist;
 
-bool UsbLibrary_Begin(void);
+void UsbLibrary_Begin(void);
 void UsbLibrary_Finish(void);
 void UsbLibrary_Clear(void);
 
