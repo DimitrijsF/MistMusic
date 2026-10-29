@@ -209,8 +209,8 @@ static void UsbStorageTask(void *arg){
                 UsbStorage_ReadFS();
             PlayerManager_UsbReady();
             UsbState_Stop();
-            //TODO DEBUG
-            PlayerManager_Play();
+            //TODO REMOVE FOR DEBUG
+            //PlayerManager_Play();
             //
         }
 
