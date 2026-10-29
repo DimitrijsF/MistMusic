@@ -354,7 +354,6 @@ static bool UsbLibrary_NeedNewIndex(const UsbTrackIndexBuffer *buffer, const cha
     FILE *file = UsbStorage_OpenFile(path);
     if (file == NULL) {
         ESP_LOGW(TAG, "Cannot open index file: %s. Will be created new one", path);
-        fclose(file);
         return true;
     }
     ESP_LOGI(TAG, "Seeking file");
