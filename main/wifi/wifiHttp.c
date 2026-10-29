@@ -8,6 +8,7 @@
 #include "wifiHttp.h"
 #include <usb/usbState.h>
 #include <usb/usbLibrary.h>
+#include <manager/nvsManager.h>
 
 static const char *TAG = "WIFI_HTTP";
 
@@ -190,6 +191,30 @@ static esp_err_t PlaylistHandler(httpd_req_t *req)
     httpd_resp_sendstr(req, "OK");
     return ESP_OK;
 }
+static esp_err_t ResetStateHandler(httpd_req_t *req)
+{
+    ESP_LOGW(TAG, "POST /reset-state");
+
+    if (!NvsManager_ResetState())
+    {
+        ESP_LOGE(TAG, "Failed to reset player state");
+
+        httpd_resp_send_err(
+            req,
+            HTTPD_500_INTERNAL_SERVER_ERROR,
+            "Failed to reset player state"
+        );
+
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Player state reset successfully");
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"success\":true}");
+
+    return ESP_OK;
+}
 void WifiHttp_Start(void)
 {
     if (s_httpServer != NULL)
@@ -249,7 +274,16 @@ void WifiHttp_Start(void)
 
     ESP_ERROR_CHECK(
         httpd_register_uri_handler(s_httpServer, &playlist)
-);
+    );
+
+    httpd_uri_t resetState = {
+        .uri = "/reset-state",
+        .method = HTTP_POST,
+        .handler = ResetStateHandler,
+        .user_ctx = NULL
+    };
+
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_httpServer, &resetState));
     
     ESP_LOGI(TAG, "HTTP server started");
 }

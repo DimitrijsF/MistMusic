@@ -79,9 +79,9 @@ void PlayerManager_SendCurrentStatus(void){
 #pragma region Arch methods
 /// @brief Main system entry point (all systems init)
 void PlayerManager_Init(void){
+    CdcUart_Init();
     NvsManager_Init();
     UsbState_SetUsbRandom(NvsManager_GetRandom());
-    CdcUart_Init();
     UsbHost_Init();
     UsbStorage_Init();
     Output_Init();

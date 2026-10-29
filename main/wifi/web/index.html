@@ -1,173 +1,231 @@
 <!DOCTYPE html>
+
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>MistMusic</title>
+<title>MistMusic</title>
 
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 400px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
+<style>
+    body {
+        font-family: sans-serif;
+        max-width: 400px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
 
-        h1 {
-            margin-bottom: 30px;
-        }
+    h1 {
+        margin-bottom: 30px;
+    }
 
-        label {
-            display: block;
-            font-size: 18px;
-        }
+    label {
+        display: block;
+        font-size: 18px;
+    }
 
-        select {
-            width: 100%;
-            padding: 12px;
-            font-size: 18px;
-            margin-top: 8px;
-            margin-bottom: 10px;
-        }
+    select {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        margin-top: 8px;
+        margin-bottom: 10px;
+    }
 
-        #playlistInfo {
-            margin-top: 0;
-            margin-bottom: 25px;
-            color: #666;
-            font-size: 14px;
-        }
+    #playlistInfo {
+        margin-top: 0;
+        margin-bottom: 25px;
+        color: #666;
+        font-size: 14px;
+    }
 
-        input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-    </style>
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+
+    .service {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+    }
+
+    #resetStateButton {
+        width: 100%;
+        padding: 12px;
+        font-size: 15px;
+        cursor: pointer;
+    }
+
+    #resetStateButton:disabled {
+        cursor: wait;
+        opacity: 0.6;
+    }
+</style>
+
 </head>
 
 <body>
 
-    <h1>MistMusic</h1>
+<h1>MistMusic</h1>
 
-    <label for="playlistSelect">Playlist</label>
+<label for="playlistSelect">Playlist</label>
 
-    <select id="playlistSelect" onchange="playlistChanged()">
-        <option value="0">All tracks</option>
-    </select>
+<select id="playlistSelect" onchange="playlistChanged()">
+    <option value="0">All tracks</option>
+</select>
 
-    <p id="playlistInfo"></p>
+<p id="playlistInfo"></p>
 
-    <label>
-        <input type="checkbox" id="randomPlayback" onchange="randomChanged()">
-        Random Playback
-    </label>
+<label>
+    <input type="checkbox" id="randomPlayback" onchange="randomChanged()">
+    Random Playback
+</label>
 
-    <script>
-        function loadState() {
-            fetch('/state')
-                .then(response => {
-                    if (!response.ok)
-                        throw new Error('HTTP ' + response.status);
+<div class="service">
+    <button id="resetStateButton" onclick="resetState()">
+        Reset Player State
+    </button>
+</div>
 
-                    return response.json();
-                })
-                .then(state => {
-                    document.getElementById('randomPlayback').checked = state.random;
-                })
-                .catch(error => {
-                    console.log('Failed to load state:', error);
-                });
-        }
+<script>
+    function loadState() {
+        fetch('/state')
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('HTTP ' + response.status);
 
-        function randomChanged() {
-            var enabled = document.getElementById('randomPlayback').checked;
-            var value = enabled ? 1 : 0;
-
-            fetch('/random?value=' + value)
-                .then(response => {
-                    if (!response.ok)
-                        throw new Error('HTTP ' + response.status);
-                })
-                .catch(error => {
-                    console.log('Failed to update random playback:', error);
-                });
-        }
-
-        function loadPlaylists() {
-            fetch('/playlists')
-                .then(response => {
-                    if (!response.ok)
-                        throw new Error('HTTP ' + response.status);
-
-                    return response.json();
-                })
-                .then(data => {
-                    var select = document.getElementById('playlistSelect');
-
-                    select.innerHTML = '';
-
-                    data.playlists.forEach(function (playlist) {
-                        var option = document.createElement('option');
-
-                        option.value = playlist.index;
-                        option.textContent = playlist.name;
-
-                        select.appendChild(option);
-                    });
-
-                    select.value = data.current;
-
-                    updatePlaylistInfo(data);
-                })
-                .catch(error => {
-                    console.log('Failed to load playlists:', error);
-                });
-        }
-
-        function playlistChanged() {
-            var select = document.getElementById('playlistSelect');
-            var index = select.value;
-
-            fetch('/playlist?index=' + encodeURIComponent(index))
-                .then(response => {
-                    if (!response.ok)
-                        throw new Error('HTTP ' + response.status);
-
-                    return fetch('/playlists');
-                })
-                .then(response => {
-                    if (!response.ok)
-                        throw new Error('HTTP ' + response.status);
-
-                    return response.json();
-                })
-                .then(data => {
-                    select.value = data.current;
-                    updatePlaylistInfo(data);
-                })
-                .catch(error => {
-                    console.log('Failed to select playlist:', error);
-                    loadPlaylists();
-                });
-        }
-
-        function updatePlaylistInfo(data) {
-            var select = document.getElementById('playlistSelect');
-            var index = select.value;
-
-            var playlist = data.playlists.find(function (item) {
-                return String(item.index) === String(index);
+                return response.json();
+            })
+            .then(state => {
+                document.getElementById('randomPlayback').checked = state.random;
+            })
+            .catch(error => {
+                console.log('Failed to load state:', error);
             });
+    }
 
-            document.getElementById('playlistInfo').textContent =
-                playlist ? playlist.trackCount + ' tracks' : '';
-        }
+    function randomChanged() {
+        var enabled = document.getElementById('randomPlayback').checked;
+        var value = enabled ? 1 : 0;
 
-        loadState();
-        loadPlaylists();
-    </script>
+        fetch('/random?value=' + value)
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('HTTP ' + response.status);
+            })
+            .catch(error => {
+                console.log('Failed to update random playback:', error);
+            });
+    }
+
+    function loadPlaylists() {
+        fetch('/playlists')
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('HTTP ' + response.status);
+
+                return response.json();
+            })
+            .then(data => {
+                var select = document.getElementById('playlistSelect');
+
+                select.innerHTML = '';
+
+                data.playlists.forEach(function (playlist) {
+                    var option = document.createElement('option');
+
+                    option.value = playlist.index;
+                    option.textContent = playlist.name;
+
+                    select.appendChild(option);
+                });
+
+                select.value = data.current;
+
+                updatePlaylistInfo(data);
+            })
+            .catch(error => {
+                console.log('Failed to load playlists:', error);
+            });
+    }
+
+    function playlistChanged() {
+        var select = document.getElementById('playlistSelect');
+        var index = select.value;
+
+        fetch('/playlist?index=' + encodeURIComponent(index))
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('HTTP ' + response.status);
+
+                return fetch('/playlists');
+            })
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('HTTP ' + response.status);
+
+                return response.json();
+            })
+            .then(data => {
+                select.value = data.current;
+                updatePlaylistInfo(data);
+            })
+            .catch(error => {
+                console.log('Failed to select playlist:', error);
+                loadPlaylists();
+            });
+    }
+
+    function updatePlaylistInfo(data) {
+        var select = document.getElementById('playlistSelect');
+        var index = select.value;
+
+        var playlist = data.playlists.find(function (item) {
+            return String(item.index) === String(index);
+        });
+
+        document.getElementById('playlistInfo').textContent =
+            playlist ? playlist.trackCount + ' tracks' : '';
+    }
+
+    function resetState() {
+        if (!confirm('Reset saved player state?'))
+            return;
+
+        var button = document.getElementById('resetStateButton');
+
+        button.disabled = true;
+
+        fetch('/reset-state', {
+            method: 'POST'
+        })
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('HTTP ' + response.status);
+
+                return response.json();
+            })
+            .then(result => {
+                if (!result.success)
+                    throw new Error('Reset failed');
+
+                alert('Player state successfully reset!');
+            })
+            .catch(error => {
+                console.log('Failed to reset player state:', error);
+                alert('Failed to reset player state!');
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    }
+
+    loadState();
+    loadPlaylists();
+</script>
 
 </body>
 </html>

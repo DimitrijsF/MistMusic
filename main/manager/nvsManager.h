@@ -25,4 +25,6 @@ bool NvsManager_SetResumePosition(long position);
 bool NvsManager_GetPlaylist(char *playlist, size_t size);
 bool NvsManager_SetPlaylist(const char *name);
 
+bool NvsManager_ResetState(void);
+
 bool NvsManager_Commit(void);
