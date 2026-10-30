@@ -79,9 +79,9 @@ void PlayerManager_SendCurrentStatus(void){
 #pragma region Arch methods
 /// @brief Main system entry point (all systems init)
 void PlayerManager_Init(void){
+    CdcUart_Init();
     NvsManager_Init();
     UsbState_SetUsbRandom(NvsManager_GetRandom());
-    CdcUart_Init();
     UsbHost_Init();
     UsbStorage_Init();
     Output_Init();
@@ -93,8 +93,11 @@ void PlayerManager_Play(void){
     ESP_LOGI(TAG, "PLAY called");
     UsbState usb = UsbState_GetState();
     if(usb == USB_STOP || usb == USB_PLAY)
+    {
         UsbPlayer_Play();
-    CdcState_CdcPlay();
+        CdcState_CdcPlay();
+        UsbState_Play();
+    }
 }
 void PlayerManager_Stop(void){
     ESP_LOGI(TAG, "STOP called");

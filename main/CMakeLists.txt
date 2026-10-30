@@ -8,6 +8,7 @@ idf_component_register(
         "usb/usbState.c"
         "usb/usbLibrary.c"
         "usb/usbDecoder.c"
+        "usb/usbBuffer.c"
 
         "media/mediaOutput.c"
 

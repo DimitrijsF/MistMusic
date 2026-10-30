@@ -18,8 +18,7 @@ static const char *TAG = "CDC_UART";
 static void CdcUart_Task(void *arg);
 static TaskHandle_t uartTaskHandle = NULL;
 
-esp_err_t CdcUart_Init(void)
-{
+esp_err_t CdcUart_Init(void){
     uart_config_t config =
     {
         .baud_rate = CDC_UART_BAUDRATE,
@@ -70,73 +69,39 @@ esp_err_t CdcUart_Init(void)
     return ESP_OK;
 }
 
-void UartShutDown(void)
-{
-    if (uartTaskHandle != NULL)
-    {
+void UartShutDown(void){
+    if (uartTaskHandle != NULL){
         vTaskDelete(uartTaskHandle);
         uartTaskHandle = NULL;
     }
 
-    ESP_ERROR_CHECK(
-        uart_driver_delete(CDC_UART_PORT));
+    ESP_ERROR_CHECK(uart_driver_delete(CDC_UART_PORT));
 }
 
-void CdcUart_Send(const uint8_t *data, size_t length)
-{
+void CdcUart_Send(const uint8_t *data, size_t length){
     vTaskDelay(pdMS_TO_TICKS(10));
-
     uart_write_bytes(CDC_UART_PORT, data, length);
 
     char text[128];
     int pos = 0;
 
-    for (size_t i = 0; i < length; i++)
-    {
-        pos += snprintf(
-            text + pos,
-            sizeof(text) - pos,
-            "%02X ",
-            data[i]);
+    for (size_t i = 0; i < length; i++){
+        pos += snprintf(text + pos, sizeof(text) - pos, "%02X ", data[i]);
     }
-
-    ESP_LOGI(
-        TAG,
-        "TX (%u): >> %s",
-        length,
-        text);
 }
 
-static void CdcUart_Task(void *arg)
-{
+static void CdcUart_Task(void *arg){
     uint8_t buffer[32];
-
-    while (true)
-    {
+    while (true) {
         int length =
-            uart_read_bytes(
-                CDC_UART_PORT,
-                buffer,
-                sizeof(buffer),
-                pdMS_TO_TICKS(10));
+            uart_read_bytes(CDC_UART_PORT, buffer, sizeof(buffer), pdMS_TO_TICKS(10));
 
-        if (length > 0)
-        {
+        if (length > 0){
             char text[256];
             int pos = 0;
-            for (int i = 0; i < length; i++)
-            {
-                pos += snprintf(
-                    text + pos,
-                    sizeof(text) - pos,
-                    "%02X ",
-                    buffer[i]);
+            for (int i = 0; i < length; i++){
+                pos += snprintf( text + pos, sizeof(text) - pos, "%02X ", buffer[i]);
             }
-            ESP_LOGI(
-                TAG,
-                "RX (%d): << %s",
-                length,
-                text);
             CdcProtocol_ProcessPacket(buffer, length);
         }
     }

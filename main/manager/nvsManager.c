@@ -1,6 +1,9 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
+#include "esp_app_desc.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
@@ -17,6 +20,8 @@ static const char *TAG = "NVS_MANAGER";
 #define KEY_FINGERPRINT "fingerprint"
 #define KEY_SECONDS "playedSeconds"
 #define KEY_POSITION "trackPosition"
+#define KEY_PLAYLIST "playlist"
+#define KEY_BUILD_HASH "savedHash"
 
 static nvs_handle_t NvsHandle = 0;
 static bool IsInitialized = false;
@@ -24,6 +29,7 @@ static bool IsInitialized = false;
 bool NvsManager_Init(void){
     if (IsInitialized)
         return true;
+
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND){
         ESP_LOGW(TAG, "NVS requires erase");
@@ -36,11 +42,13 @@ bool NvsManager_Init(void){
         ESP_LOGE(TAG, "NVS initialization failed: %s", esp_err_to_name(err));
         return false;
     }
+
     err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &NvsHandle);
     if (err != ESP_OK){
         ESP_LOGE(TAG, "Failed to open namespace: %s", esp_err_to_name(err));
         return false;
     }
+    
     IsInitialized = true;
     ESP_LOGI(TAG, "NVS manager initialized");
     return true;
@@ -95,8 +103,7 @@ bool NvsManager_SetResumeSeconds(uint32_t seconds){
     }
     return true;
 }
-long NvsManager_GetResumePosition(void)
-{
+long NvsManager_GetResumePosition(void){
     long position = 0;
     if (!IsInitialized)
         return position;
@@ -187,7 +194,7 @@ uint32_t NvsManager_GetFingerprint(void){
     return fingerprint;
 }
 bool NvsManager_SetFingerprint(uint32_t fingerprint){
-     if (!IsInitialized)
+    if (!IsInitialized)
         return false;
     esp_err_t err = nvs_set_u32(NvsHandle, KEY_FINGERPRINT, fingerprint);
     if (err != ESP_OK){
@@ -196,9 +203,69 @@ bool NvsManager_SetFingerprint(uint32_t fingerprint){
     }
     return true;
 }
-bool NvsManager_Commit(void){
+bool NvsManager_SetPlaylist(const char *name){
     if (!IsInitialized)
         return false;
+    if (name == NULL)
+        name = "";
+    esp_err_t err = nvs_set_str(NvsHandle, KEY_PLAYLIST, name);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to set playlist: %s", esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
+bool NvsManager_GetPlaylist(char *playlist, size_t size){
+    if (playlist == NULL || size == 0)
+        return false;
+
+    playlist[0] = '\0';
+    if (!IsInitialized)
+        return false;
+    size_t requiredSize = size;
+    esp_err_t err = nvs_get_str(NvsHandle, KEY_PLAYLIST, playlist, &requiredSize);
+    if (err == ESP_ERR_NVS_NOT_FOUND){
+        ESP_LOGI(TAG, "Playlist not found, using all tracks");
+        memcpy(playlist, "none", 5);
+        return true;
+    }
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to read playlist: %s", esp_err_to_name(err));
+        memcpy(playlist, "none", 5);
+        return false;
+    }
+    return true;
+}
+
+bool NvsManager_ResetState(void){
+    ESP_LOGI(TAG, "Erasing existing config...");
+    const char *keys[] = {
+        KEY_TRACK,
+        KEY_DISKIN,
+        KEY_FINGERPRINT,
+        KEY_SECONDS,
+        KEY_POSITION,
+        KEY_PLAYLIST
+    };
+    const size_t keyCount = sizeof(keys) / sizeof(keys[0]);
+    for (size_t i = 0; i < keyCount; i++){
+        esp_err_t err = nvs_erase_key(NvsHandle, keys[i]);
+        if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND){
+            ESP_LOGE(TAG, "Failed to erase key '%s': %s",
+                     keys[i], esp_err_to_name(err));
+            return false;
+        }
+    }
+    esp_err_t err = nvs_commit(NvsHandle);
+    if (err != ESP_OK){
+        ESP_LOGE(TAG, "Failed to commit playback state reset: %s",
+                 esp_err_to_name(err));
+        return false;
+    }
+    ESP_LOGI(TAG, "Config reset successfully");
+    return true;
+}
+bool NvsManager_Commit(void){
     esp_err_t err = nvs_commit(NvsHandle);
     if (err != ESP_OK){
         ESP_LOGE(TAG, "NVS commit failed: %s", esp_err_to_name(err));
